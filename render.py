@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """news-image-20261118 — deterministic front-page renderer (Pillow, stdlib + PIL).
 
-Draws "THE WORLD IN ONE PAGE — Wednesday 18 November 2026": 50 verified
-stories (13 illustrated panels + 37 numbered briefs), a numbered world map,
+Draws "THE WORLD IN ONE PAGE — Wednesday 18 November 2026": 49 verified
+stories (13 illustrated panels + 36 numbered briefs), a numbered world map,
 a UTC timeline, key numbers, a region strip and a black DATE CHECK footer.
 Output: entry.png, exactly 1024x1024, deterministic across runs.
 
@@ -63,7 +63,9 @@ REGION_COLORS = {
 }
 
 # ---------------------------------------------------------------- data
-# Panels 1-8 (illustrated). Title: max 2 lines. Summary: exactly 2 lines.
+# Illustrated panels. Title: max 2 lines. Summary: exactly 2 lines.
+# The "n" literals below are placeholders: sequential numbers 1-13 in
+# reading order are assigned after BRIEFS (see the renumbering block).
 PANELS = [
     {
         "n": 1, "city": "SHENZHEN", "topic": "SUMMIT", "region": "ASIA",
@@ -163,8 +165,9 @@ PANELS = [
     },
 ]
 
-# Briefs: the 37 stories not illustrated, one line each in MORE NEWS
-# (city - headline. source). Original story numbers kept.
+# Briefs: the stories not illustrated, one line each in MORE NEWS
+# (city - headline. source). Numbered sequentially after the panels
+# by the renumbering block below.
 BRIEFS = [
     (9, "Gaza", "Yellow Line divides Gaza under ceasefire", "BBC", "MIDDLE EAST"),
     (10, "Brussels", "EU proposes \u20ac45bn Ukraine loan for 2027", "Reuters", "EUROPE"),
@@ -173,7 +176,6 @@ BRIEFS = [
     (13, "Washington", "Jeffries wins Democrats' nod 251-11", "AP", "AMERICAS"),
     (15, "Kerch", "Trains roll again, one day after the collapse", "TASS", "EUROPE"),
     (16, "The Hague", "ICC sets first Libya trial for May 2027", "UN", "AFRICA"),
-    (18, "Juneau", "Peltola wins Alaska's Senate seat", "AP", "AMERICAS"),
     (19, "Washington", "Board of Peace takes shape over Gaza", "AP", "MIDDLE EAST"),
     (20, "Vienna", "Grossi: IAEA cannot trace Iran's nuclear material", "IAEA", "GLOBAL"),
     (21, "Moscow", "Putin not ready for serious peace talks", "NYT", "EUROPE"),
@@ -205,6 +207,15 @@ BRIEFS = [
     (50, "Nuseirat", "Israeli tanks cross Yellow Line into Nuseirat", "BBC", "MIDDLE EAST"),
 ]
 
+# Sequential numbering (v3 micro-fix): illustrated panels are 1-13 in
+# reading order (heroes, then card rows); briefs continue 14..N. Every
+# number on the page (panel strips, map pins, MORE NEWS) uses these.
+for _i, _p in enumerate(PANELS):
+    _p["n"] = _i + 1
+BRIEFS = [(14 + _i, _c, _h, _s, _r)
+          for _i, (_n, _c, _h, _s, _r) in enumerate(BRIEFS)]
+STORY_TOTAL = len(PANELS) + len(BRIEFS)
+
 KEY_NUMBERS = [
     ("141", "Russian drones fired at Ukraine overnight"),
     ("126", "of them downed, Kyiv's air force says"),
@@ -224,7 +235,7 @@ EXCLUSIONS_BEFORE = (
     "Gaza aid statement (15 Nov) - CCW Geneva (16 Nov, no decision) - "
     "US chip-export rule (16 Nov) - SAFF final & Dhoni retirement (17 Nov) - "
     "Knesset speaker vote (17 Nov) - Kerch bridge collapse (16-17 Nov) - "
-    "Nvidia results (17 Nov)"
+    "Nvidia results (17 Nov) - Alaska Senate call (17 Nov)"
 )
 EXCLUSIONS_FUTURE = (
     "Trump-Xi-Putin trilateral (Thu 19 Nov) - Anthropic trading as ANT "
@@ -313,49 +324,80 @@ def title_color(hue):
 # Every scene is flat vector shapes drawn with Pillow only. No photos, no
 # copied art. Each scene fills its box (x0, y0, x1, y1).
 
+def _flag_star(d, cx, cy, r, col):
+    """One filled 5-point star (deterministic geometry)."""
+    pts = []
+    for k in range(10):
+        ang = -math.pi / 2 + k * math.pi / 5
+        rad = r if k % 2 == 0 else r * 0.45
+        pts.append((cx + rad * math.cos(ang), cy + rad * math.sin(ang)))
+    d.polygon(pts, fill=col)
+
+
 def scene_apec(d, x0, y0, x1, y1):
-    """Shenzhen skyline at dusk, three flags, leaders' table."""
+    """Shenzhen skyline at dusk; three big flags (China, U.S., Russia) flying
+    clear in the upper half. V3 redraw (Keva): no figures, no table band,
+    flags whole and clear of the panel strip and label."""
     w, h = x1 - x0, y1 - y0
     # dusk sky bands
     for i in range(h):
         t = i / max(1, h - 1)
-        r = int(245 - 150 * t)
-        g = int(196 - 90 * t)
-        b = int(120 + 60 * t)
-        d.line([(x0, y0 + i), (x1, y0 + i)], fill=(r, g, b))
-    # sun
-    d.ellipse([x1 - 52, y0 + 8, x1 - 22, y0 + 38], fill=(255, 214, 90))
-    # skyline silhouettes
+        d.line([(x0, y0 + i), (x1, y0 + i)],
+               fill=(int(246 - 120 * t), int(198 - 70 * t), int(128 + 40 * t)))
+    # flagpoles first; the skyline will overlap their feet
+    poles = [x0 + 46, x0 + 152, x0 + 252]
+    for px in poles:
+        d.rectangle([px, y0 + 20, px + 3, y1 - 4], fill=(38, 36, 44))
+        d.ellipse([px - 1, y0 + 17, px + 4, y0 + 22], fill=(250, 200, 80))
+    # skyline silhouette along the bottom
     import random as _r
     rnd = _r.Random(11)
-    base = y0 + int(h * 0.52)
-    x = x0 + 4
-    while x < x1 - 14:
-        bw = rnd.randint(16, 30)
-        bh = rnd.randint(22, 52)
-        d.rectangle([x, base - bh, x + bw, base + 22], fill=(52, 48, 66))
-        for wy in range(base - bh + 5, base - 2, 9):
-            for wx in range(x + 3, x + bw - 3, 7):
-                if rnd.random() < 0.5:
-                    d.rectangle([wx, wy, wx + 3, wy + 4], fill=(255, 214, 90))
+    ground = y1 - 10
+    x = x0 + 3
+    while x < x1 - 12:
+        bw = rnd.randint(15, 28)
+        bh = rnd.randint(13, 27)
+        d.rectangle([x, ground - bh, x + bw, ground], fill=(52, 48, 66))
+        for wy in range(ground - bh + 4, ground - 3, 8):
+            for wx in range(x + 3, x + bw - 3, 6):
+                if rnd.random() < 0.45:
+                    d.rectangle([wx, wy, wx + 2, wy + 3], fill=(255, 214, 90))
         x += bw + 3
-    d.rectangle([x0, base + 20, x1, y1], fill=(74, 64, 58))
-    # three flags on poles above the table
-    flag_cols = [(206, 32, 32), (36, 64, 140), (220, 220, 220)]
-    fx = x0 + 26
-    for col in flag_cols:
-        d.rectangle([fx, y0 + 12, fx + 3, base + 20], fill=(40, 40, 40))
-        d.rectangle([fx + 3, y0 + 12, fx + 33, y0 + 28], fill=col)
-        if col == (220, 220, 220):
-            d.rectangle([fx + 3, y0 + 18, fx + 33, y0 + 23], fill=(36, 64, 140))
-            d.rectangle([fx + 3, y0 + 23, fx + 33, y0 + 28], fill=(206, 32, 32))
-        fx += 52
-    # leaders' table + three seated figures
-    d.rectangle([x0 + 14, base + 2, x1 - 14, base + 16], fill=(96, 58, 40))
-    for i, cx in enumerate([x0 + 60, x0 + w // 2, x1 - 60]):
-        d.ellipse([cx - 9, base - 12, cx + 9, base + 6], fill=(232, 190, 150))
-        d.polygon([(cx - 14, base + 4), (cx + 14, base + 4), (cx + 10, base - 8),
-                   (cx - 10, base - 8)], fill=[(30, 30, 30), (52, 52, 52), (90, 30, 30)][i])
+    d.rectangle([x0, ground, x1, y1], fill=(70, 60, 54))
+    # Flags: whole cloth right of each pole, tops below the strip/label
+    # (y0+23), drawn last so nothing covers them. The right third of each
+    # flag is shaded darker to read as a fold in the cloth.
+    fy0, fy1 = y0 + 23, y0 + 49
+    fw = 58
+
+    def bands(px, spec):
+        split = px + 4 + int(fw * 0.68)
+        for (f0, f1, col) in spec:
+            ya = fy0 + int((fy1 - fy0) * f0)
+            yb = fy0 + int((fy1 - fy0) * f1)
+            d.rectangle([px + 4, ya, split, yb], fill=col)
+            d.rectangle([split, ya, px + 4 + fw, yb],
+                        fill=(int(col[0] * 0.8), int(col[1] * 0.8),
+                              int(col[2] * 0.8)))
+    # China: red field, one large star + four small stars
+    bands(poles[0], [(0.0, 1.0, (206, 32, 32))])
+    _flag_star(d, poles[0] + 14, fy0 + 8, 5, (255, 222, 60))
+    for (sx, sy) in [(24, 4), (27, 9), (27, 15), (24, 20)]:
+        _flag_star(d, poles[0] + sx, fy0 + sy, 2, (255, 222, 60))
+    # United States: seven stripes + blue canton with dot stars
+    bands(poles[1], [(i / 7.0, (i + 1) / 7.0,
+                      (178, 34, 34) if i % 2 == 0 else (245, 245, 245))
+                     for i in range(7)])
+    d.rectangle([poles[1] + 4, fy0, poles[1] + 31, fy0 + 13], fill=(36, 52, 120))
+    for ry in range(3):
+        for rx in range(4):
+            sx = poles[1] + 8 + rx * 6
+            sy = fy0 + 3 + ry * 4
+            d.rectangle([sx, sy, sx + 1, sy + 1], fill=(255, 255, 255))
+    # Russia: white / blue / red horizontal bands
+    bands(poles[2], [(0.0, 1 / 3.0, (245, 245, 245)),
+                     (1 / 3.0, 2 / 3.0, (36, 64, 160)),
+                     (2 / 3.0, 1.0, (206, 32, 32))])
 
 
 def scene_gulf(d, x0, y0, x1, y1):
@@ -378,7 +420,7 @@ def scene_gulf(d, x0, y0, x1, y1):
     d.rectangle([x0 + 18, y0 + int(h * 0.44), x0 + 34, y0 + int(h * 0.60)], fill=(24, 30, 40))
     d.ellipse([x0 + 16, y0 + int(h * 0.38), x0 + 36, y0 + int(h * 0.46)], fill=(24, 30, 40))
     # drones with dashed trails
-    for (dx, dy, ln) in [(x0 + 90, y0 + 22, 46), (x0 + 170, y0 + 40, 60), (x0 + 250, y0 + 16, 40)]:
+    for (dx, dy, ln) in [(x0 + 90, y0 + 28, 46), (x0 + 170, y0 + 40, 60), (x0 + 244, y0 + 27, 40)]:
         for k in range(0, ln, 8):
             d.line([(dx - k, dy + k // 3), (dx - k - 5, dy + k // 3)], fill=(255, 190, 80), width=2)
         d.ellipse([dx - 4, dy - 3, dx + 10, dy + 3], fill=(200, 200, 200))
@@ -396,7 +438,9 @@ def scene_manila(d, x0, y0, x1, y1):
     """Malacanang palace facade, two flags, handshake."""
     w, h = x1 - x0, y1 - y0
     d.rectangle([x0, y0, x1, y1], fill=(188, 216, 232))
-    d.ellipse([x1 - 46, y0 + 8, x1 - 16, y0 + 38], fill=(255, 220, 110))
+    # sun centred (clear of both flags); the palace roof overlaps its base
+    d.ellipse([x0 + w // 2 - 14, y0 + 3, x0 + w // 2 + 14, y0 + 31],
+              fill=(255, 220, 110))
     # palace
     d.rectangle([x0 + 10, y0 + int(h * 0.38), x1 - 10, y1 - 8], fill=(240, 234, 220))
     d.polygon([(x0 + 10, y0 + int(h * 0.38)), (x0 + w // 2, y0 + int(h * 0.18)),
@@ -404,12 +448,13 @@ def scene_manila(d, x0, y0, x1, y1):
     for cx in [x0 + 34, x0 + 84, x0 + 134, x0 + 184, x0 + 234, x0 + 284]:
         if cx < x1 - 16:
             d.rectangle([cx - 5, y0 + int(h * 0.40), cx + 5, y1 - 8], fill=(210, 200, 180))
-    # flags: US + Philippines
+    # flags: US + Philippines, lowered in v3 so the strip and label
+    # rectangles no longer cover them
     for i, (fx, cols) in enumerate([(x0 + 22, [(178, 34, 34), (255, 255, 255)]),
                                     (x1 - 58, [(255, 255, 255), (0, 56, 168)])]):
-        d.rectangle([fx, y0 + 8, fx + 3, y0 + int(h * 0.38)], fill=(40, 40, 40))
+        d.rectangle([fx, y0 + 21, fx + 3, y0 + 40], fill=(40, 40, 40))
         for j, c in enumerate(cols):
-            d.rectangle([fx + 3, y0 + 8 + j * 8, fx + 30, y0 + 16 + j * 8], fill=c)
+            d.rectangle([fx + 3, y0 + 21 + j * 8, fx + 30, y0 + 29 + j * 8], fill=c)
     # two figures shaking hands
     cy = y1 - 8
     for cx, suit in [(x0 + w // 2 - 34, (30, 30, 30)), (x0 + w // 2 + 34, (52, 52, 52))]:
@@ -812,7 +857,7 @@ def draw_masthead(d, y):
     f_small = font(SANS_B, 13)
     f_date = font(SERIF_B, 44)
     d.text((MARGIN, y), "THE WORLD IN ONE PAGE", font=f_small, fill=INK)
-    right = "50 STORIES  \u00b7  ALL DATED 18 NOV"
+    right = "%d STORIES  \u00b7  ALL DATED 18 NOV" % STORY_TOTAL
     d.text((W - MARGIN - f_small.getlength(right), y), right, font=f_small, fill=RED)
     date = "WEDNESDAY 18 NOVEMBER 2026"
     d.text((MARGIN, y + 14), date, font=f_date, fill=INK)
@@ -831,7 +876,7 @@ def region_tally():
 
 def draw_region_strip(d, y, counts):
     total = sum(counts.values())
-    assert total == 50, "story total must be 50, got %d" % total
+    assert total == STORY_TOTAL, "story total mismatch: %d" % total
     f = font(SANS_B, 12)
     x = MARGIN
     seg_w = CONTENT_W / len(REGION_ORDER)
@@ -934,7 +979,7 @@ def draw_bottom_band(d, y, band_h, hues, report):
                 if point_in_poly(lon, lat, poly):
                     d.ellipse([gx - 1, gy - 1, gx + 1, gy + 1], fill=(120, 140, 130))
                     break
-    # pins 1-8
+    # pins for the 13 illustrated panels
     pin_f = font(SANS_B, 10)
     for p in PANELS:
         px, py = lonlat_to_xy(p["lon"], p["lat"], map_x0, map_y0, map_x1, map_y1)
@@ -968,7 +1013,7 @@ def draw_bottom_band(d, y, band_h, hues, report):
     d.rectangle([more_x0, y, more_x1, y + band_h], fill=PANEL_BG,
                 outline=PANEL_BORDER, width=1)
     d.text((more_x0 + 8, y + 6), "MORE NEWS", font=f_head, fill=INK)
-    right = "37 MORE STORIES"
+    right = "%d MORE STORIES" % len(BRIEFS)
     d.text((more_x1 - 8 - f_head.getlength(right), y + 6), right, font=f_head, fill=RED)
     d.line([(more_x0, y + 24), (more_x1, y + 24)], fill=RULE, width=1)
     brief_f = font(SANS, 10)
@@ -1020,8 +1065,9 @@ def draw_footer(d, y):
     f = font(SANS, 9)
     text = ("Sources: Reuters \u00b7 AP \u00b7 BBC \u00b7 Bloomberg \u00b7 CNBC \u00b7 ONS \u00b7 IMD \u00b7 "
             "NASA/JPL \u00b7 UN News \u00b7 WHO \u00b7 Amnesty \u00b7 IAEA \u00b7 ICC \u00b7 FIFA \u00b7 "
-            "Federal Reserve. All 50 stories happened, or were first reported, on Wednesday "
-            "18 November 2026; claims are attributed. Original flat illustrations.")
+            "Federal Reserve. All %d stories happened, or were first reported, on Wednesday "
+            "18 November 2026; claims are attributed. Original flat illustrations."
+            ) % STORY_TOTAL
     lines = wrap(text, f, CONTENT_W)
     draw_wrapped(d, lines, MARGIN, y, f, INK_SOFT, 11)
     return y + len(lines) * 11
