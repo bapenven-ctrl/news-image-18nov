@@ -16,12 +16,22 @@ Standard library only. The program simply copies the committed PNG, so
 two runs always write byte-identical output.
 """
 
+import hashlib
 import os
 import shutil
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SOURCE = os.path.join(HERE, "entry.png")
+
+
+def sha256_file(path):
+    """Hash of a file's bytes, read in chunks."""
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for chunk in iter(lambda: handle.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def output_path():
@@ -39,7 +49,10 @@ def main():
         os.makedirs(parent, exist_ok=True)
     shutil.copyfile(SOURCE, dest)
     # Sanity guard: the written file must be the committed image, whole.
+    # Size alone is a weak check, so compare the full sha256 as well.
     if os.path.getsize(dest) != os.path.getsize(SOURCE):
+        return 1
+    if sha256_file(dest) != sha256_file(SOURCE):
         return 1
     return 0
 
