@@ -134,11 +134,11 @@ PANELS = [
         "label": "CONFIRMED - AP", "scene": "gta",
     },
     {
-        "n": 18, "city": "JUNEAU", "topic": "SENATE", "region": "AMERICAS",
-        "lon": -134.4, "lat": 58.3,
-        "title": "Peltola wins Alaska's Senate seat",
-        "summary": "Peltola takes Alaska's Senate seat, AP reports.",
-        "label": "CONFIRMED - AP", "scene": "alaska",
+        "n": 17, "city": "ANTALYA", "topic": "COP31", "region": "GLOBAL",
+        "lon": 30.7, "lat": 36.9,
+        "title": "COP31 launches a 'climate reality check'",
+        "summary": "COP31 launches a 'climate reality check' as the summit opens in Antalya.",
+        "label": "CONFIRMED - UN NEWS", "scene": "cop31",
     },
     {
         "n": 35, "city": "KINSHASA", "topic": "EBOLA", "region": "AFRICA",
@@ -173,7 +173,7 @@ BRIEFS = [
     (13, "Washington", "Jeffries wins Democrats' nod 251-11", "AP", "AMERICAS"),
     (15, "Kerch", "Trains roll again, one day after the collapse", "TASS", "EUROPE"),
     (16, "The Hague", "ICC sets first Libya trial for May 2027", "UN", "AFRICA"),
-    (17, "Antalya", "COP31 launches a \"climate reality check\"", "UN News", "GLOBAL"),
+    (18, "Juneau", "Peltola wins Alaska's Senate seat", "AP", "AMERICAS"),
     (19, "Washington", "Board of Peace takes shape over Gaza", "AP", "MIDDLE EAST"),
     (20, "Vienna", "Grossi: IAEA cannot trace Iran's nuclear material", "IAEA", "GLOBAL"),
     (21, "Moscow", "Putin not ready for serious peace talks", "NYT", "EUROPE"),
@@ -705,12 +705,39 @@ def scene_xavier(d, x0, y0, x1, y1):
         d.line([(rx, y0 + 6), (rx - 4, y0 + 20)], fill=(190, 220, 240), width=2)
 
 
+def scene_cop31(d, x0, y0, x1, y1):
+    """Climate summit: a globe, a row of flags, rising sun."""
+    w, h = x1 - x0, y1 - y0
+    d.rectangle([x0, y0, x1, y1], fill=(198, 224, 236))
+    d.rectangle([x0, y1 - 8, x1, y1], fill=(120, 170, 120))
+    # sun, top right corner (clear of the flags below it)
+    d.ellipse([x1 - 24, y0 + 3, x1 - 10, y0 + 17], fill=(255, 190, 60))
+    # globe, left, dropped below the strip line
+    gx, gy, r = x0 + 52, y0 + 31, 13
+    d.ellipse([gx - r, gy - r, gx + r, gy + r], fill=(64, 140, 220),
+              outline=(30, 90, 160), width=2)
+    d.polygon([(gx - 9, gy - 6), (gx - 3, gy - 9), (gx - 1, gy - 3),
+               (gx - 7, gy - 1)], fill=(90, 190, 110))
+    d.polygon([(gx + 2, gy + 1), (gx + 9, gy - 1), (gx + 10, gy + 5),
+               (gx + 4, gy + 8)], fill=(90, 190, 110))
+    d.polygon([(gx - 5, gy + 7), (gx + 1, gy + 5), (gx + 1, gy + 10),
+               (gx - 3, gy + 11)], fill=(90, 190, 110))
+    # flags on poles, centre-right, below the strip
+    flag_cols = [(206, 32, 32), (36, 64, 140), (250, 210, 40), (34, 139, 92),
+                 (255, 255, 255)]
+    fx = x0 + 100
+    for col in flag_cols:
+        d.rectangle([fx, y0 + 20, fx + 2, y1 - 8], fill=(60, 60, 60))
+        d.rectangle([fx + 2, y0 + 20, fx + 15, y0 + 29], fill=col)
+        fx += 19
+
+
 SCENES = {
     "apec": scene_apec, "gulf": scene_gulf, "manila": scene_manila,
     "markets": scene_markets, "akvan": scene_akvan, "ukraine": scene_ukraine,
     "voyager": scene_voyager, "caracas": scene_caracas,
     "gta": scene_gta, "alaska": scene_alaska, "ebola": scene_ebola,
-    "tennis": scene_tennis, "xavier": scene_xavier,
+    "tennis": scene_tennis, "xavier": scene_xavier, "cop31": scene_cop31,
 }
 
 # ---------------------------------------------------------------- world map
