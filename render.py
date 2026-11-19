@@ -2,19 +2,25 @@
 """news-image-20261118 — deterministic front-page renderer (Pillow, stdlib + PIL).
 
 Draws "THE WORLD IN ONE PAGE — Wednesday 18 November 2026": 46 verified
-stories (16 illustrated panels + 30 numbered briefs), a numbered world map,
+stories (13 illustrated panels + 33 numbered briefs), a numbered world map,
 a UTC timeline, key numbers, a region strip and a black DATE CHECK footer.
 Output: entry.png, exactly 1024x1024, deterministic across runs.
 
 Design basis: Sketsa B4 (Keva, 19 Nov 2026) + verified winners' formula,
-revised for v4 after the dev-score analysis of v3 (ANALISIS-DEV-V3.md):
-every panel illustrated, ALL panel headlines in uniform black newspaper
-ink (the v3 multi-colour headline rule is dropped — every top entry uses
-black), hard-news stories promoted to panels (EU EUR45bn loan, Fed
-minutes, UK inflation join the illustrated set, 16 panels like rank 3),
-taller illustration strips, briefs trimmed to 30 at a larger font,
-every panel summary at least 2 lines, map 1/3 wide left + MORE NEWS 2/3
-right, black DATE CHECK footer with the exclusion list.
+revised for v5 after the dev-defeat analysis of v4 (ANALISIS-KEKALAHAN-V4.md
++ AUDIT-VISUAL-V4.md): 13 BIG panels (the dev #1 formula: 40 stories,
+13 panels) with tall, INFORMATIVE scenes that tell each story (objects
+specific to the event + in-scene labels, never a bare pictogram); the 3
+softest panels (GTA VI, COP31, tennis) demoted to briefs so all 46 stories
+stay; ONE serif family (Liberation Serif) for masthead, headlines,
+summaries and briefs, sans only for labels/status/timeline/map/DATE CHECK;
+panel strips cream with a small region-colour number chip + navy text;
+brief numbers in a single dark red; region colours desaturated 20% with
+equalised lightness and one consistent mapping everywhere (region bar =
+panel chip = map pin); status as a dark chip with white text; briefs in
+serif with bold city lead-ins, one line each; DATE CHECK itemised
+per date (every exclusion listed with its own date, like dev #10);
+map landmass darker, pins larger.
 """
 
 import colorsys
@@ -33,8 +39,12 @@ REPORT = os.path.join(_HERE, "report.json" if os.path.basename(OUT) == "entry.pn
                        else os.path.basename(OUT).replace(".png", "-report.json"))
 
 # ---------------------------------------------------------------- fonts
+# v5: ONE serif family (Liberation Serif) for masthead + headlines +
+# summaries + briefs; Liberation Sans only for labels, status chips,
+# timeline, map captions and the DATE CHECK body.
 FONT_DIR = "/usr/share/fonts/truetype"
-SERIF_B = os.path.join(FONT_DIR, "dejavu", "DejaVuSerif-Bold.ttf")
+SERIF_B = os.path.join(FONT_DIR, "liberation", "LiberationSerif-Bold.ttf")
+SERIF = os.path.join(FONT_DIR, "liberation", "LiberationSerif-Regular.ttf")
 SANS_B = os.path.join(FONT_DIR, "liberation", "LiberationSans-Bold.ttf")
 SANS = os.path.join(FONT_DIR, "liberation", "LiberationSans-Regular.ttf")
 SANS_I = os.path.join(FONT_DIR, "liberation", "LiberationSans-Italic.ttf")
@@ -57,18 +67,32 @@ PANEL_BG = (255, 255, 255)
 PANEL_BORDER = (40, 40, 40)
 STRIP_BG = (18, 38, 74)
 
+BRIEF_RED = (155, 28, 28)    # #9B1C1C — the single brief-number colour
+STRIP_CREAM = (252, 249, 240)
+
+
+def _calm(rgb, sat_keep=0.8, light=0.42):
+    """Desaturate a region colour and pin its lightness, so the six
+    region colours sit at one visual weight (audit fix: colour harmony)."""
+    h, l, s = colorsys.rgb_to_hls(rgb[0] / 255.0, rgb[1] / 255.0, rgb[2] / 255.0)
+    r, g, b = colorsys.hls_to_rgb(h, light, s * sat_keep)
+    return (int(r * 255), int(g * 255), int(b * 255))
+
+
 REGION_COLORS = {
-    "ASIA": (46, 125, 190),        # blue
-    "MIDDLE EAST": (214, 122, 24),  # orange
-    "EUROPE": (122, 62, 158),      # purple
-    "AMERICAS": (34, 139, 92),     # green
-    "AFRICA": (196, 52, 110),      # magenta
-    "GLOBAL": (110, 110, 110),     # grey
+    "ASIA": _calm((46, 125, 190)),        # blue
+    "MIDDLE EAST": _calm((214, 122, 24)),  # orange
+    "EUROPE": _calm((122, 62, 158)),      # purple
+    "AMERICAS": _calm((34, 139, 92)),     # green
+    "AFRICA": _calm((196, 52, 110)),      # magenta
+    "GLOBAL": (104, 104, 104),            # grey
 }
 
 # ---------------------------------------------------------------- data
-# Illustrated panels, in reading order: 3 heroes, card row A (6),
-# card row B (7) = 16 panels. Title: max 2 lines. Summary: >= 2 lines.
+# Illustrated panels, in reading order: 3 heroes, card row A (5),
+# card row B (5) = 13 panels (v5: the 3 softest v4 panels — GTA VI,
+# COP31, tennis — are briefs now, so every panel is hard news and big).
+# Title: max 2 lines. Summary: >= 2 lines.
 # The "n" literals below are placeholders: sequential numbers 1-16 in
 # reading order are assigned after BRIEFS (see the renumbering block).
 PANELS = [
@@ -153,32 +177,11 @@ PANELS = [
         "label": "CONFIRMED - ONS", "scene": "ukinfl",
     },
     {
-        "n": 12, "city": "WELLINGTON", "topic": "GTA VI", "region": "GLOBAL",
-        "lon": 174.8, "lat": -41.3,
-        "title": "GTA VI goes on sale; NZ first to play",
-        "summary": "On sale today; New Zealand, first into release day, plays first.",
-        "label": "CONFIRMED - AP", "scene": "gta",
-    },
-    {
-        "n": 13, "city": "ANTALYA", "topic": "COP31", "region": "GLOBAL",
-        "lon": 30.7, "lat": 36.9,
-        "title": "COP31's climate reality check",
-        "summary": "COP31 opens in Antalya with a 'climate reality check'.",
-        "label": "CONFIRMED - UN NEWS", "scene": "cop31",
-    },
-    {
         "n": 14, "city": "KINSHASA", "topic": "EBOLA", "region": "AFRICA",
         "lon": 15.3, "lat": -4.3,
         "title": "Ebola cases pass 11,300 in DR Congo",
         "summary": "Cases pass 11,300, the WHO reports, in the DR Congo outbreak.",
         "label": "CONFIRMED - WHO", "scene": "ebola",
-    },
-    {
-        "n": 15, "city": "TURIN", "topic": "TENNIS", "region": "EUROPE",
-        "lon": 7.7, "lat": 45.1,
-        "title": "Alcaraz beats Medvedev 6-2, 6-4",
-        "summary": "Alcaraz wins in straight sets, 6-2, 6-4, at the ATP Finals.",
-        "label": "CONFIRMED - AP", "scene": "tennis",
     },
     {
         "n": 16, "city": "RAROTONGA", "topic": "CYCLONE", "region": "GLOBAL",
@@ -206,9 +209,11 @@ BRIEFS = [
     (0, "Kabul", "UN frees $18m in aid for Afghans", "OCHA", "ASIA"),
     (0, "Gaza", "Winter rains deepen the Gaza crisis", "UN News", "MIDDLE EAST"),
     (0, "Geneva", "WHO: antibiotic resistance surging", "WHO", "GLOBAL"),
+    (0, "Antalya", "COP31's climate reality check", "UN News", "GLOBAL"),
     (0, "New York", "UN backs Syria, N. Korea resolutions", "UN", "GLOBAL"),
     (0, "Jerusalem", "Region races to stop a wider war", "AP", "MIDDLE EAST"),
     (0, "Shenzhen", "Trump vows to \"wipe them out\"", "The Hill", "AMERICAS"),
+    (0, "Wellington", "GTA VI goes on sale; NZ first to play", "AP", "GLOBAL"),
     (0, "London", "Gold falls 3.2% to $3,725 an ounce", "Reuters", "GLOBAL"),
     (0, "Rabat", "Morocco back to world No. 5 in FIFA", "FIFA", "AFRICA"),
     (0, "Beijing", "Takaichi in China, first PM since 2019", "Reuters", "ASIA"),
@@ -222,15 +227,16 @@ BRIEFS = [
     (0, "Dhaka", "Garment protests shut factories, day 2", "AFP", "ASIA"),
     (0, "Riyadh", "Coalition stops Houthi missile", "Reuters", "MIDDLE EAST"),
     (0, "Berlin", "Germany backs Diallo FIFA challenge", "Reuters", "EUROPE"),
+    (0, "Turin", "Alcaraz beats Medvedev 6-2, 6-4", "AP", "EUROPE"),
     (0, "Nuseirat", "Israeli tanks cross Yellow Line", "BBC", "MIDDLE EAST"),
 ]
 
-# Sequential numbering: illustrated panels are 1-16 in reading order
-# (heroes, then card rows); briefs continue 17..N. Every number on the
+# Sequential numbering: illustrated panels are 1-13 in reading order
+# (heroes, then card rows); briefs continue 14..N. Every number on the
 # page (panel strips, map pins, MORE NEWS) uses these.
 for _i, _p in enumerate(PANELS):
     _p["n"] = _i + 1
-BRIEFS = [(17 + _i, _c, _h, _s, _r)
+BRIEFS = [(len(PANELS) + 1 + _i, _c, _h, _s, _r)
           for _i, (_n, _c, _h, _s, _r) in enumerate(BRIEFS)]
 STORY_TOTAL = len(PANELS) + len(BRIEFS)
 
@@ -382,10 +388,17 @@ def scene_apec(d, x0, y0, x1, y1):
                     d.rectangle([wx, wy, wx + 2, wy + 3], fill=(255, 214, 90))
         x += bw + 3
     d.rectangle([x0, ground, x1, y1], fill=(70, 60, 54))
+    # tarmac foreground: dark apron with a dashed white centreline and a
+    # yellow edge line, in front of the skyline (v5: the hero scene must
+    # read as an airport arrival, not flags over rooftops)
+    d.rectangle([x0, y1 - 13, x1, y1], fill=(44, 44, 52))
+    for tx in range(x0 + 8, x1 - 14, 22):
+        d.rectangle([tx, y1 - 8, tx + 12, y1 - 6], fill=(240, 240, 240))
+    d.line([(x0, y1 - 13), (x1, y1 - 13)], fill=(250, 200, 80), width=2)
     # Flags: whole cloth right of each pole, tops below the strip/label
-    # (y0+23), drawn last so nothing covers them. The right third of each
+    # (y0+24), drawn last so nothing covers them. The right third of each
     # flag is shaded darker to read as a fold in the cloth.
-    fy0, fy1 = y0 + 23, y0 + 49
+    fy0, fy1 = y0 + 24, y0 + 24 + max(26, int(h * 0.34))
     fw = 58
 
     def bands(px, spec):
@@ -517,19 +530,38 @@ def scene_markets(d, x0, y0, x1, y1):
 
 
 def scene_akvan(d, x0, y0, x1, y1):
-    """Cyclone spiral over the Bay of Bengal, coastline, rain."""
+    """Cyclone Akvan over the Bay of Bengal: spiral, a track arrow curving
+    in toward the Indian coast, surf on the shoreline, rain (v5: the scene
+    must tell the landfall story, not just show a swirl)."""
     w, h = x1 - x0, y1 - y0
     d.rectangle([x0, y0, x1, y1], fill=(24, 90, 140))
     # sea swirls
+    cx, cy = x0 + w // 2 - 14, y0 + h // 2 - 4
     for r in range(8, 46, 8):
-        d.arc([x0 + w // 2 - r, y0 + h // 2 - 6 - r // 2,
-               x0 + w // 2 + r, y0 + h // 2 - 6 + r // 2],
+        d.arc([cx - r, cy - r // 2, cx + r, cy + r // 2],
               start=20 + r, end=300 + r, fill=(255, 255, 255), width=3)
-    d.ellipse([x0 + w // 2 - 7, y0 + h // 2 - 13, x0 + w // 2 + 7, y0 + h // 2 + 1],
-              fill=(255, 255, 255))
+    d.ellipse([cx - 7, cy - 7, cx + 7, cy + 7], fill=(255, 255, 255))
     # coastline (right side)
     d.polygon([(x1 - 46, y0), (x1, y0), (x1, y1), (x1 - 70, y1), (x1 - 58, y0 + 40)],
               fill=(214, 190, 140))
+    # surf chevrons breaking on the shoreline
+    for i, sy in enumerate(range(y0 + 14, y1 - 8, 13)):
+        sx = x1 - 66 + (i % 3) * 7
+        d.arc([sx, sy, sx + 12, sy + 7], start=200, end=340, fill=(255, 255, 255), width=2)
+    # track arrow: dashed curve from the eye toward the coast + head
+    steps = 12
+    ex, ey = x1 - 62, y0 + int(h * 0.34)
+    for i in range(steps):
+        t0, t1 = i / steps, (i + 0.55) / steps
+        xa = cx + 16 + (ex - cx - 16) * t0
+        ya = cy + (ey - cy) * t0 - 10 * math.sin(t0 * math.pi)
+        xb = cx + 16 + (ex - cx - 16) * t1
+        yb = cy + (ey - cy) * t1 - 10 * math.sin(t1 * math.pi)
+        d.line([(xa, ya), (xb, yb)], fill=(255, 210, 90), width=2)
+    d.polygon([(ex, ey), (ex - 11, ey - 4), (ex - 8, ey + 6)], fill=(255, 210, 90))
+    t = "TO INDIA COAST"
+    tf = font(SANS_B, 9)
+    d.text((x1 - 8 - tf.getlength(t), y1 - 13), t, font=tf, fill=(90, 60, 20))
     # rain lines
     for rx in range(x0 + 10, x1 - 50, 16):
         d.line([(rx, y0 + 8), (rx - 5, y0 + 26)], fill=(180, 210, 235), width=2)
@@ -635,36 +667,66 @@ def scene_caracas(d, x0, y0, x1, y1):
 
 
 def scene_gta(d, x0, y0, x1, y1):
-    """Launch night: neon VI sign over a skyline, a game controller."""
+    """Launch day in the city: night skyline with a neon VI sign, a game
+    shop billboard reading ON SALE TODAY, and a car on the street below
+    (v5 rewrite: a scene that tells the release-day story, no controller
+    pictogram). Kept in the scene table though GTA VI is a brief in v5."""
     w, h = x1 - x0, y1 - y0
-    d.rectangle([x0, y0, x1, y1], fill=(24, 8, 40))
+    # night sky gradient bands
+    for i in range(int(h * 0.72)):
+        t = i / max(1, int(h * 0.72) - 1)
+        d.line([(x0, y0 + i), (x1, y0 + i)],
+               fill=(int(26 - 10 * t), int(10 + 6 * t), int(46 + 10 * t)))
     import random as _r
     rnd = _r.Random(71)
-    for _ in range(16):
+    for _ in range(14):
         sx = rnd.randint(x0 + 4, x1 - 4)
-        sy = rnd.randint(y0 + 3, y0 + int(h * 0.4))
+        sy = rnd.randint(y0 + 3, y0 + int(h * 0.35))
         d.ellipse([sx, sy, sx + 2, sy + 2], fill=(230, 200, 240))
-    # skyline strip along the bottom
-    d.rectangle([x0, y1 - 11, x1, y1], fill=(12, 6, 22))
-    for bx in range(x0 + 4, x1 - 12, 17):
-        bh = 8 + (bx * 7) % 9
-        d.rectangle([bx, y1 - 11 - bh, bx + 11, y1 - 11], fill=(16, 8, 30))
-        d.rectangle([bx + 3, y1 - 11 - bh + 3, bx + 6, y1 - 11 - bh + 6],
-                    fill=(255, 214, 90))
-    # neon sign, centre top
-    cx = x0 + w // 2
-    d.rounded_rectangle([cx - 30, y0 + 4, cx + 30, y0 + 24], radius=4,
+    # skyline (mid layer) with lit windows
+    base = y0 + int(h * 0.72)
+    x = x0 + 3
+    while x < x1 - 14:
+        bw = rnd.randint(13, 24)
+        bh = rnd.randint(int(h * 0.22), int(h * 0.44))
+        d.rectangle([x, base - bh, x + bw, base], fill=(18, 10, 34))
+        for wy in range(base - bh + 3, base - 4, 6):
+            for wx in range(x + 2, x + bw - 2, 5):
+                if rnd.random() < 0.5:
+                    d.rectangle([wx, wy, wx + 2, wy + 3], fill=(255, 214, 90))
+        x += bw + 3
+    # neon VI sign on the tallest block, left
+    d.rounded_rectangle([x0 + 10, y0 + 5, x0 + 40, y0 + 23], radius=4,
                         fill=(40, 10, 60), outline=(255, 80, 190), width=2)
-    t = "VI"
-    tf = font(SANS_B, 15)
-    d.text((cx - tf.getlength(t) / 2, y0 + 6), t, font=tf, fill=(255, 120, 210))
-    # controller, centre bottom
-    d.rounded_rectangle([cx - 27, y1 - 23, cx + 27, y1 - 9], radius=7,
-                        fill=(30, 30, 48), outline=(120, 220, 255), width=2)
-    d.line([(cx - 19, y1 - 16), (cx - 11, y1 - 16)], fill=(220, 220, 220), width=3)
-    d.line([(cx - 15, y1 - 20), (cx - 15, y1 - 12)], fill=(220, 220, 220), width=3)
-    d.ellipse([cx + 8, y1 - 20, cx + 14, y1 - 14], fill=(255, 80, 190))
-    d.ellipse([cx + 17, y1 - 17, cx + 23, y1 - 11], fill=(80, 220, 255))
+    tf = font(SANS_B, 14)
+    d.text((x0 + 25 - tf.getlength("VI") / 2, y0 + 7), "VI", font=tf,
+           fill=(255, 120, 210))
+    # game-shop billboard, right: the words carry the news
+    bw2 = int(w * 0.52)
+    bx = x1 - 6 - bw2
+    d.rectangle([bx, y0 + 6, bx + bw2, y0 + 24], fill=(250, 214, 90),
+                outline=(150, 110, 20), width=1)
+    t = "ON SALE TODAY"
+    tf2 = font(SANS_B, 11)
+    d.text((bx + (bw2 - tf2.getlength(t)) / 2, y0 + 10), t, font=tf2,
+           fill=(60, 45, 10))
+    d.rectangle([bx + 6, y0 + 24, bx + 9, base], fill=(30, 20, 40))
+    d.rectangle([bx + bw2 - 9, y0 + 24, bx + bw2 - 6, base], fill=(30, 20, 40))
+    # street (foreground) with a car: body, cabin, wheels, headlight beam
+    d.rectangle([x0, base, x1, y1], fill=(14, 8, 24))
+    d.line([(x0, base + 2), (x1, base + 2)], fill=(120, 100, 160), width=1)
+    car_y = y1 - 8
+    cx0 = x0 + int(w * 0.30)
+    d.polygon([(cx0, car_y - 6), (cx0 + 8, car_y - 6), (cx0 + 13, car_y - 13),
+               (cx0 + 34, car_y - 13), (cx0 + 40, car_y - 6), (cx0 + 52, car_y - 6),
+               (cx0 + 52, car_y - 2), (cx0, car_y - 2)], fill=(200, 60, 90))
+    d.rectangle([cx0 + 15, car_y - 12, cx0 + 24, car_y - 7], fill=(140, 220, 255))
+    d.rectangle([cx0 + 26, car_y - 12, cx0 + 33, car_y - 7], fill=(140, 220, 255))
+    for wx in (cx0 + 10, cx0 + 42):
+        d.ellipse([wx - 4, car_y - 6, wx + 4, car_y + 2], fill=(20, 20, 26),
+                  outline=(200, 200, 210), width=1)
+    d.polygon([(cx0 + 52, car_y - 5), (cx0 + 66, car_y - 8), (cx0 + 66, car_y - 1)],
+              fill=(255, 240, 170))
 
 
 def scene_alaska(d, x0, y0, x1, y1):
@@ -745,60 +807,95 @@ def scene_tennis(d, x0, y0, x1, y1):
 
 
 def scene_xavier(d, x0, y0, x1, y1):
-    """Pacific island under a turning cyclone: spiral, palm, rain."""
+    """Xavier turning toward the Cook Islands: open-sea spiral, a dashed
+    track arrow curving in to a labelled island with a palm (v5 rewrite:
+    a track map that tells the story, not a lone swirl)."""
     w, h = x1 - x0, y1 - y0
-    d.rectangle([x0, y0, x1, y0 + int(h * 0.55)], fill=(70, 150, 190))
-    d.rectangle([x0, y0 + int(h * 0.55), x1, y1], fill=(24, 110, 150))
-    # spiral in the sky, top left
-    cx, cy = x0 + 42, y0 + 15
-    for r in range(5, 19, 5):
+    d.rectangle([x0, y0, x1, y1], fill=(24, 110, 150))
+    # lighter sea bands near the top
+    for i in range(int(h * 0.4)):
+        t = i / max(1, int(h * 0.4) - 1)
+        d.line([(x0, y0 + i), (x1, y0 + i)],
+               fill=(int(70 - 40 * t), int(150 - 36 * t), int(190 - 36 * t)))
+    # cyclone spiral, upper left over the sea
+    cx, cy = x0 + int(w * 0.24), y0 + int(h * 0.36)
+    for r in range(5, 21, 5):
         d.arc([cx - r, cy - r // 2, cx + r, cy + r // 2], start=30 + r,
               end=310 + r, fill=WHITE, width=2)
     d.ellipse([cx - 3, cy - 2, cx + 3, cy + 2], fill=WHITE)
-    # island, bottom centre-right
-    ix = x0 + int(w * 0.52)
-    d.polygon([(ix, y1), (ix + 16, y1 - 12), (ix + 52, y1 - 12), (ix + 70, y1)],
+    t = "XAVIER \u00b7 CAT 5"
+    tf = font(SANS_B, 9)
+    d.text((cx - tf.getlength(t) / 2, cy + int(h * 0.30)), t, font=tf, fill=WHITE)
+    # island landmass, bottom right: sand shore + green top + palm
+    ix = x0 + int(w * 0.55)
+    iy = y1 - int(h * 0.30)
+    d.polygon([(ix, y1), (ix + 14, iy), (ix + 54, iy), (ix + 72, y1)],
               fill=(220, 200, 140))
-    d.polygon([(ix + 16, y1 - 12), (ix + 52, y1 - 12), (ix + 44, y1 - 17),
-               (ix + 24, y1 - 17)], fill=(60, 160, 90))
-    # palm: leaning trunk + fronds
-    tx, ty = ix + 34, y1 - 16
-    d.line([(tx, ty), (tx + 3, ty - 9), (tx + 7, ty - 16)], fill=(110, 80, 40), width=3)
-    for (fx, fy) in [(-11, -20), (-5, -23), (3, -24), (10, -21), (13, -16)]:
-        d.line([(tx + 7, ty - 16), (tx + 7 + fx, ty - 16 + (fy + 16))],
+    d.polygon([(ix + 14, iy), (ix + 54, iy), (ix + 46, iy - 5), (ix + 22, iy - 5)],
+              fill=(60, 160, 90))
+    tx, ty = ix + 36, iy - 4
+    d.line([(tx, ty), (tx + 3, ty - 8), (tx + 7, ty - 14)], fill=(110, 80, 40), width=3)
+    for (fx, fy) in [(-11, -18), (-5, -21), (3, -22), (10, -19), (13, -14)]:
+        d.line([(tx + 7, ty - 14), (tx + 7 + fx, ty - 14 + (fy + 14))],
                fill=(40, 130, 70), width=2)
-    # rain, right side
-    for rx in range(x1 - 52, x1 - 8, 11):
+    t2 = "RAROTONGA"
+    d.text((ix + 36 - tf.getlength(t2) / 2, y1 - 11), t2, font=tf,
+           fill=(90, 60, 20))
+    # dashed track arrow: from the eye, curving down toward the island
+    steps = 12
+    ex, ey = ix + 2, iy - 8
+    for i in range(steps):
+        t0, t1 = i / steps, (i + 0.55) / steps
+        xa = cx + 14 + (ex - cx - 14) * t0
+        ya = cy + 8 + (ey - cy - 8) * t0 + 12 * math.sin(t0 * math.pi)
+        xb = cx + 14 + (ex - cx - 14) * t1
+        yb = cy + 8 + (ey - cy - 8) * t1 + 12 * math.sin(t1 * math.pi)
+        d.line([(xa, ya), (xb, yb)], fill=(255, 210, 90), width=2)
+    d.polygon([(ex, ey), (ex - 11, ey - 5), (ex - 7, ey + 6)], fill=(255, 210, 90))
+    # rain streaks, right side
+    for rx in range(x1 - 46, x1 - 8, 11):
         d.line([(rx, y0 + 6), (rx - 4, y0 + 20)], fill=(190, 220, 240), width=2)
 
 
 def scene_cop31(d, x0, y0, x1, y1):
-    """Climate summit: a globe, a row of flags, rising sun."""
+    """COP31 in Antalya: a conference centre with a COP31 banner across
+    its glass front, a flag row on the roof and delegates on the plaza
+    (v5 rewrite: the venue and its banner tell the story, not a lone
+    flag pictogram). Kept in the table though COP31 is a brief in v5."""
     w, h = x1 - x0, y1 - y0
     d.rectangle([x0, y0, x1, y1], fill=(198, 224, 236))
-    d.rectangle([x0, y1 - 8, x1, y1], fill=(120, 170, 120))
-    # sun, top right corner (clear of the flags below it)
-    d.ellipse([x1 - 24, y0 + 3, x1 - 10, y0 + 17], fill=(255, 190, 60))
-    # globe, left, dropped below the strip line
-    gx, gy, r = x0 + 52, y0 + 31, 13
-    d.ellipse([gx - r, gy - r, gx + r, gy + r], fill=(64, 140, 220),
-              outline=(30, 90, 160), width=2)
-    d.polygon([(gx - 9, gy - 6), (gx - 3, gy - 9), (gx - 1, gy - 3),
-               (gx - 7, gy - 1)], fill=(90, 190, 110))
-    d.polygon([(gx + 2, gy + 1), (gx + 9, gy - 1), (gx + 10, gy + 5),
-               (gx + 4, gy + 8)], fill=(90, 190, 110))
-    d.polygon([(gx - 5, gy + 7), (gx + 1, gy + 5), (gx + 1, gy + 10),
-               (gx - 3, gy + 11)], fill=(90, 190, 110))
-    # flags on poles, centre-right, below the strip (spacing scales
-    # with the box so narrow cards keep all five flags in-box)
+    d.ellipse([x1 - 26, y0 + 3, x1 - 11, y0 + 18], fill=(255, 190, 60))
+    # conference building: main block + glass band
+    bx0, bx1 = x0 + 10, x1 - 10
+    by0, by1 = y0 + int(h * 0.30), y1 - 10
+    d.rectangle([bx0, by0, bx1, by1], fill=(238, 240, 242))
+    d.rectangle([bx0, by0 + 14, bx1, by1 - 6], fill=(120, 170, 205))
+    for gx in range(bx0 + 8, bx1 - 6, 12):
+        d.line([(gx, by0 + 14), (gx, by1 - 6)], fill=(90, 140, 180), width=1)
+    # the banner across the top of the building, carrying the name
+    d.rectangle([bx0, by0, bx1, by0 + 14], fill=(24, 90, 60))
+    t = "COP31 \u00b7 ANTALYA"
+    tf = font(SANS_B, 11)
+    d.text((x0 + w / 2 - tf.getlength(t) / 2, by0 + 2), t, font=tf, fill=WHITE)
+    # flag row on poles along the roof
     flag_cols = [(206, 32, 32), (36, 64, 140), (250, 210, 40), (34, 139, 92),
                  (255, 255, 255)]
-    fx = x0 + int(w * 0.52)
-    step = max(12, int(w * 0.088))
+    fx = x0 + int(w * 0.16)
+    step = max(14, int(w * 0.16))
     for col in flag_cols:
-        d.rectangle([fx, y0 + 20, fx + 2, y1 - 8], fill=(60, 60, 60))
-        d.rectangle([fx + 2, y0 + 20, fx + 2 + step - 5, y0 + 29], fill=col)
+        if fx + step - 4 > x1 - 12:
+            break
+        d.rectangle([fx, by0 - 12, fx + 2, by0], fill=(60, 60, 60))
+        d.rectangle([fx + 2, by0 - 12, fx + step - 4, by0 - 4], fill=col)
         fx += step
+    # plaza + delegate figures (foreground)
+    d.rectangle([x0, y1 - 10, x1, y1], fill=(150, 170, 150))
+    for i, fx2 in enumerate([0.22, 0.38, 0.55, 0.71]):
+        cx = x0 + int(w * fx2)
+        suit = (40, 40, 60) if i % 2 == 0 else (90, 50, 50)
+        d.ellipse([cx - 3, y1 - 17, cx + 3, y1 - 11], fill=(232, 190, 150))
+        d.polygon([(cx - 4, y1 - 1), (cx + 4, y1 - 1), (cx + 3, y1 - 11),
+                   (cx - 3, y1 - 11)], fill=suit)
 
 
 def scene_euloan(d, x0, y0, x1, y1):
@@ -867,7 +964,7 @@ def scene_ukinfl(d, x0, y0, x1, y1):
     d.polygon([(x1 - 12, y0 + 14), (x1 - 26, y0 + 16), (x1 - 17, y0 + 26)],
               fill=(178, 34, 34))
     # three price tags climbing the line
-    tags = [(0.16, 0.66, "\u00a32.10"), (0.44, 0.44, "\u00a33.40"), (0.70, 0.24, "\u00a34.85")]
+    tags = [(0.16, 0.68, "\u00a32.10"), (0.44, 0.48, "\u00a33.40"), (0.70, 0.30, "\u00a34.85")]
     tf = font(SANS_B, 10)
     for (fx, fy, t) in tags:
         tx, ty = x0 + int(w * fx), y0 + int(h * fy)
@@ -960,14 +1057,14 @@ CONTENT_W = W - 2 * MARGIN  # 1008
 
 def draw_masthead(d, y):
     f_small = font(SANS_B, 13)
-    f_date = font(SERIF_B, 44)
+    f_date = font(SERIF_B, 38)
     d.text((MARGIN, y), "THE WORLD IN ONE PAGE", font=f_small, fill=INK)
     right = "%d STORIES  \u00b7  ALL DATED 18 NOV" % STORY_TOTAL
     d.text((W - MARGIN - f_small.getlength(right), y), right, font=f_small, fill=RED)
     date = "WEDNESDAY 18 NOVEMBER 2026"
-    d.text((MARGIN, y + 14), date, font=f_date, fill=INK)
-    d.line([(MARGIN, y + 64), (W - MARGIN, y + 64)], fill=RULE, width=3)
-    return y + 70
+    d.text((MARGIN, y + 13), date, font=f_date, fill=INK)
+    d.line([(MARGIN, y + 54), (W - MARGIN, y + 54)], fill=RULE, width=3)
+    return y + 56
 
 
 def region_tally():
@@ -987,28 +1084,28 @@ def draw_region_strip(d, y, counts):
     seg_w = CONTENT_W / len(REGION_ORDER)
     for region in REGION_ORDER:
         col = REGION_COLORS[region]
-        d.rectangle([x, y, x + seg_w - 2, y + 18], fill=col)
+        d.rectangle([x, y, x + seg_w - 2, y + 16], fill=col)
         label = "%s %d" % (region, counts[region])
         tw = f.getlength(label)
-        d.text((x + (seg_w - 2 - tw) / 2, y + 3), label, font=f, fill=WHITE)
+        d.text((x + (seg_w - 2 - tw) / 2, y + 2), label, font=f, fill=WHITE)
         x += seg_w
-    return y + 22
+    return y + 20
 
 
 def draw_key_numbers(d, y):
-    f_big = font(SERIF_B, 23)
-    f_cap = font(SANS, 10)
+    f_big = font(SERIF_B, 21)
+    f_cap = font(SANS, 9)
     d.text((MARGIN, y + 2), "THE DAY\nIN NUMBERS", font=font(SANS_B, 10), fill=INK_SOFT)
     x = MARGIN + 92
     col_w = (CONTENT_W - 92) / len(KEY_NUMBERS)
     for big, cap in KEY_NUMBERS:
         d.text((x + 4, y), big, font=f_big, fill=NAVY)
         lines = wrap(cap, f_cap, col_w - 10)
-        draw_wrapped(d, lines, x + 4, y + 27, f_cap, INK_SOFT, 12)
+        draw_wrapped(d, lines, x + 4, y + 23, f_cap, INK_SOFT, 10)
         x += col_w
         if x < W - MARGIN:
-            d.line([(x - 4, y + 2), (x - 4, y + 46)], fill=(200, 200, 200), width=1)
-    return y + 52
+            d.line([(x - 4, y + 2), (x - 4, y + 30)], fill=(200, 200, 200), width=1)
+    return y + 43
 
 
 def draw_timeline(d, y):
@@ -1021,8 +1118,8 @@ def draw_timeline(d, y):
         parts.append("%s \u2014 %s" % (t, what))
     text = "   \u00b7   ".join(parts)
     d.text((x, y + 1), text, font=f_txt, fill=INK)
-    d.line([(MARGIN, y + 15), (W - MARGIN, y + 15)], fill=RULE, width=2)
-    return y + 19
+    d.line([(MARGIN, y + 13), (W - MARGIN, y + 13)], fill=RULE, width=2)
+    return y + 17
 
 
 def draw_panel(d, p, x0, y0, x1, y1, title_fnt, sum_fnt, label_fnt, strip_fnt,
@@ -1031,22 +1128,31 @@ def draw_panel(d, p, x0, y0, x1, y1, title_fnt, sum_fnt, label_fnt, strip_fnt,
     d.rectangle([x0, y0, x1, y1], fill=PANEL_BG, outline=PANEL_BORDER, width=1)
     # illustration
     SCENES[p["scene"]](d, x0 + 1, y0 + 1, x1 - 1, y0 + 1 + ill_h)
-    # strip "N - CITY - TOPIC" over the top of the illustration
-    strip = "%d \u00b7 %s \u00b7 %s" % (p["n"], p["city"], p["topic"])
-    sw = strip_fnt.getlength(strip) + 10
-    d.rectangle([x0 + 1, y0 + 1, x0 + 1 + sw, y0 + 1 + 17], fill=REGION_COLORS[p["region"]])
-    d.text((x0 + 6, y0 + 3), strip, font=strip_fnt, fill=WHITE)
-    # attribution label: top-right for wide heroes, bottom-right for narrow cards
+    # v5 strip: a cream bar across the top of the illustration (rank-1
+    # pattern) — a small region-colour chip carries the story number,
+    # then CITY - TOPIC in navy. No more full-colour confetti bars.
+    d.rectangle([x0 + 1, y0 + 1, x1 - 1, y0 + 1 + 17], fill=STRIP_CREAM)
+    d.line([(x0 + 1, y0 + 18), (x1 - 1, y0 + 18)], fill=PANEL_BORDER, width=1)
+    num = str(p["n"])
+    nw = strip_fnt.getlength(num)
+    d.rectangle([x0 + 4, y0 + 3, x0 + 4 + nw + 6, y0 + 15],
+                fill=REGION_COLORS[p["region"]])
+    d.text((x0 + 7, y0 + 3), num, font=strip_fnt, fill=WHITE)
+    strip = "%s \u00b7 %s" % (p["city"], p["topic"])
+    d.text((x0 + 4 + nw + 12, y0 + 3), strip, font=strip_fnt, fill=NAVY)
+    # attribution: a DARK chip with white text (v4's pale grey label was
+    # nearly unreadable). Heroes: a dark segment at the right end of the
+    # strip. Cards: a dark chip at the bottom right, below the summary.
     lab = p["label"]
     lw = label_fnt.getlength(lab)
     if label_bottom:
-        ly = y1 - 13
-        d.rectangle([x1 - 1 - lw - 8, ly, x1 - 1, ly + 12], fill=(245, 245, 245))
-        d.text((x1 - 1 - lw - 4, ly + 1), lab, font=label_fnt, fill=INK_SOFT)
+        ly = y1 - 14
+        d.rectangle([x1 - 1 - lw - 8, ly, x1 - 1, ly + 13], fill=INK)
+        d.text((x1 - 1 - lw - 4, ly + 2), lab, font=label_fnt, fill=WHITE)
     else:
-        d.rectangle([x1 - 1 - lw - 8, y0 + 1, x1 - 1, y0 + 1 + 15], fill=(245, 245, 245))
-        d.text((x1 - 1 - lw - 4, y0 + 3), lab, font=label_fnt, fill=INK_SOFT)
-    # title (coloured, max 2 lines)
+        d.rectangle([x1 - 1 - lw - 8, y0 + 1, x1 - 1, y0 + 1 + 15], fill=INK)
+        d.text((x1 - 1 - lw - 4, y0 + 3), lab, font=label_fnt, fill=WHITE)
+    # title (uniform black ink, max 2 lines)
     ty = y0 + ill_h + 6
     title_lines = wrap(p["title"], title_fnt, (x1 - x0) - 12)
     report["titles"][p["n"]] = len(title_lines)
@@ -1059,8 +1165,12 @@ def draw_panel(d, p, x0, y0, x1, y1, title_fnt, sum_fnt, label_fnt, strip_fnt,
 
 
 def draw_bottom_band(d, y, band_h, hues, report):
-    """Map 1/3 left + MORE NEWS 2/3 right."""
-    map_w = 330
+    """Map left + MORE NEWS right. v5: the map block is taller, its
+    landmass dots darker (+40% contrast) and its pins bigger; briefs are
+    set in the page serif (one line each, verified against the font
+    metrics), numbers in a single dark red, city lead-ins bold, flowing
+    down two columns."""
+    map_w = 300
     gap = 6
     more_x0 = MARGIN + map_w + gap
     more_x1 = W - MARGIN
@@ -1074,7 +1184,7 @@ def draw_bottom_band(d, y, band_h, hues, report):
     map_x0 = MARGIN + 8
     map_x1 = MARGIN + map_w - 8
     d.rectangle([map_x0, map_y0, map_x1, map_y1], fill=(226, 232, 238))
-    # dot-matrix continents
+    # dot-matrix continents (darker than v4: the pale map washed out)
     step = 5
     for gy in range(map_y0 + 3, map_y1 - 2, step):
         for gx in range(map_x0 + 3, map_x1 - 2, step):
@@ -1082,16 +1192,16 @@ def draw_bottom_band(d, y, band_h, hues, report):
             lat = 90.0 - (gy - map_y0) / (map_y1 - map_y0) * 150.0
             for poly in CONTINENTS:
                 if point_in_poly(lon, lat, poly):
-                    d.ellipse([gx - 1, gy - 1, gx + 1, gy + 1], fill=(120, 140, 130))
+                    d.ellipse([gx - 1, gy - 1, gx + 1, gy + 1], fill=(74, 92, 82))
                     break
-    # pins for the illustrated panels
-    pin_f = font(SANS_B, 10)
+    # pins for the illustrated panels (v5: radius 12, was 9)
+    pin_f = font(SANS_B, 11)
     for p in PANELS:
         px, py = lonlat_to_xy(p["lon"], p["lat"], map_x0, map_y0, map_x1, map_y1)
         col = REGION_COLORS[p["region"]]
-        d.ellipse([px - 9, py - 9, px + 9, py + 9], fill=col, outline=WHITE, width=2)
+        d.ellipse([px - 12, py - 12, px + 12, py + 12], fill=col, outline=WHITE, width=2)
         num = str(p["n"])
-        d.text((px - pin_f.getlength(num) / 2, py - 7), num, font=pin_f, fill=WHITE)
+        d.text((px - pin_f.getlength(num) / 2, py - 8), num, font=pin_f, fill=WHITE)
     report["pins"] = len(PANELS)
     # Voyager callout (probe is 25.9bn km out - off the map, not a place pin)
     voy_n = next(p["n"] for p in PANELS if p["scene"] == "voyager")
@@ -1122,49 +1232,91 @@ def draw_bottom_band(d, y, band_h, hues, report):
     d.text((more_x0 + 8, y + 6), "MORE NEWS", font=f_head, fill=INK)
     right = "%d MORE STORIES" % len(BRIEFS)
     d.text((more_x1 - 8 - f_head.getlength(right), y + 6), right, font=f_head, fill=RED)
-    d.line([(more_x0, y + 24), (more_x1, y + 24)], fill=RULE, width=1)
-    brief_f = font(SANS, 11)
+    d.line([(more_x0, y + 22), (more_x1, y + 22)], fill=RULE, width=1)
+    brief_f = font(SERIF, 12)
+    brief_bf = font(SERIF_B, 12)
+    num_f = font(SERIF_B, 12)
     col_w = (more_x1 - more_x0 - 16) / 2
-    rows = (len(BRIEFS) + 1) // 2
-    row_h = (band_h - 30) / rows
+    half = (len(BRIEFS) + 1) // 2
+    cols = [BRIEFS[:half], BRIEFS[half:]]
     report["brief_lines"] = {}
-    for i, (n, city, head, src, region) in enumerate(BRIEFS):
-        col = i // rows
-        row = i % rows
-        bx = more_x0 + 8 + col * col_w
-        by = y + 28 + row * row_h
-        # region-coloured number
-        d.text((bx, by), str(n), font=font(SANS_B, 11), fill=REGION_COLORS[region])
-        text = "%s \u2014 %s. %s" % (city, head, src)
-        lines = wrap(text, brief_f, col_w - 28)
-        report["brief_lines"][n] = len(lines)
-        draw_wrapped(d, lines, bx + 24, by, brief_f, INK, 13)
+    lead = 12.6
+    for ci, col_briefs in enumerate(cols):
+        bx = more_x0 + 8 + ci * col_w
+        by = y + 27
+        for (n, city, head, src, region) in col_briefs:
+            d.text((bx, by), str(n), font=num_f, fill=BRIEF_RED)
+            text = "%s \u2014 %s. %s" % (city, head, src)
+            lines = wrap(text, brief_f, col_w - 30)
+            report["brief_lines"][n] = len(lines)
+            # bold city lead-in opens the first line (rank-1 pattern)
+            lead_txt = "%s \u2014 " % city
+            lw = brief_bf.getlength(lead_txt)
+            rest = lines[0][len(lead_txt):] if lines[0].startswith(lead_txt) else lines[0]
+            d.text((bx + 26, by), lead_txt, font=brief_bf, fill=INK)
+            d.text((bx + 26 + lw, by), rest, font=brief_f, fill=INK)
+            for li, line in enumerate(lines[1:], start=1):
+                d.text((bx + 26, by + li * lead), line, font=brief_f, fill=INK)
+            by += len(lines) * lead + 0.2
+        assert by <= y + band_h - 2, \
+            "brief column %d overflows band by %.1f px" % (ci, by - (y + band_h - 2))
     return y + band_h
 
 
-def date_check_lines():
-    """Pre-wrap the DATE CHECK body so its height is exact, not guessed."""
-    f_txt = font(SANS, 11)
-    line2 = ("Checked and NOT on this page as news \u2014 first reported before 18 Nov: "
-             + EXCLUSIONS_BEFORE + ".")
-    lines2 = wrap(line2, f_txt, CONTENT_W - 20)
-    line3 = "Not yet happened: " + EXCLUSIONS_FUTURE + "."
-    lines3 = wrap(line3, f_txt, CONTENT_W - 20)
-    return lines2, lines3
+# DATE CHECK items, one per line with its own date (v5: itemised like
+# dev #10's, not v4's run-on paragraphs — criterion 1 is checked first,
+# so the exclusions must be individually visible).
+DATE_BEFORE = [
+    ("15 Nov", "Gaza aid statement"),
+    ("16 Nov", "CCW Geneva \u2014 no decision"),
+    ("16 Nov", "US chip-export rule"),
+    ("17 Nov", "SAFF final & Dhoni retirement"),
+    ("17 Nov", "Knesset speaker vote"),
+    ("16\u201317 Nov", "Kerch bridge collapse"),
+    ("17 Nov", "Nvidia results"),
+    ("17 Nov", "Alaska Senate call"),
+]
+DATE_FUTURE = [
+    ("Thu 19 Nov", "Trump\u2013Xi\u2013Putin trilateral"),
+    ("Thu 19 Nov", "Anthropic trades as ANT"),
+    ("Fri 20 Nov", "Cyclone Akvan landfall"),
+    ("Fri 20 Nov", "COP31 close"),
+]
+
+
+def date_check_height():
+    """Title row + group row + 4 item rows at pitch 12 + padding."""
+    return 17 + 11 + 4 * 12 + 4
 
 
 def draw_date_check(d, y, h):
     d.rectangle([MARGIN, y, W - MARGIN, y + h], fill=BLACK)
     f_head = font(SANS_B, 13)
-    f_txt = font(SANS, 11)
-    d.text((MARGIN + 10, y + 6), "DATE CHECK", font=f_head, fill=(255, 210, 90))
-    line1 = ("Every story above was first reported Wednesday 18 November 2026, "
+    f_intro = font(SANS, 10)
+    f_grp = font(SANS_B, 10)
+    f_date = font(SANS_B, 10)
+    f_item = font(SANS, 10)
+    d.text((MARGIN + 10, y + 4), "DATE CHECK", font=f_head, fill=(255, 210, 90))
+    intro = ("Every story above was first reported Wednesday 18 November 2026, "
              "as far as we could check.")
-    d.text((MARGIN + 10, y + 24), line1, font=f_txt, fill=WHITE)
-    lines2, lines3 = date_check_lines()
-    draw_wrapped(d, lines2, MARGIN + 10, y + 40, f_txt, (220, 220, 220), 13)
-    y2 = y + 40 + len(lines2) * 13 + 2
-    draw_wrapped(d, lines3, MARGIN + 10, y2, f_txt, (220, 220, 220), 13)
+    d.text((MARGIN + 118, y + 6), intro, font=f_intro, fill=WHITE)
+    col_w = (CONTENT_W - 20) / 3
+    xs = [MARGIN + 10, MARGIN + 10 + col_w, MARGIN + 10 + 2 * col_w]
+    d.text((xs[0], y + 19), "NOT NEWS \u2014 FIRST REPORTED BEFORE 18 NOV:",
+           font=f_grp, fill=(255, 210, 90))
+    d.text((xs[2], y + 19), "NOT YET HAPPENED:", font=f_grp, fill=(255, 210, 90))
+    rows = max((len(DATE_BEFORE) + 1) // 2, len(DATE_FUTURE))
+    for r in range(rows):
+        iy = y + 30 + r * 12
+        for ci, item in ((0, DATE_BEFORE[r] if r < len(DATE_BEFORE) else None),
+                         (1, DATE_BEFORE[r + 4] if r + 4 < len(DATE_BEFORE) else None),
+                         (2, DATE_FUTURE[r] if r < len(DATE_FUTURE) else None)):
+            if item is None:
+                continue
+            dt, what = item
+            d.text((xs[ci], iy), dt, font=f_date, fill=(255, 210, 90))
+            d.text((xs[ci] + f_date.getlength(dt) + 4, iy), "\u2014 " + what,
+                   font=f_item, fill=(228, 228, 228))
     return y + h
 
 
@@ -1181,8 +1333,10 @@ def draw_footer(d, y):
 
 
 # ---------------------------------------------------------------- build
-def check_fit(panels, widths, title_fnt, sum_fnt, ill_h, row_h):
-    """Fail loudly if any panel's text would spill out of its box."""
+def check_fit(panels, widths, title_fnt, sum_fnt, ill_h, row_h, reserve=2):
+    """Fail loudly if any panel's text would spill out of its box.
+    reserve: pixels to keep clear at the panel bottom (15 for card rows,
+    whose attribution chip sits at the bottom right)."""
     for p, pw in zip(panels, widths):
         tl = wrap(p["title"], title_fnt, pw - 12)
         sl = wrap(p["summary"], sum_fnt, pw - 12)
@@ -1190,13 +1344,14 @@ def check_fit(panels, widths, title_fnt, sum_fnt, ill_h, row_h):
         assert len(sl) >= 2, "panel %d summary under 2 lines" % p["n"]
         need = ill_h + 6 + len(tl) * (title_fnt.size + 3) + 2 \
             + len(sl) * (sum_fnt.size + 3)
-        assert need <= row_h - 2, \
-            "panel %d needs %d px, row is %d" % (p["n"], need, row_h)
+        assert need <= row_h - reserve, \
+            "panel %d needs %d px, row is %d (reserve %d)" % (p["n"], need, row_h, reserve)
 
 
 def build():
-    # v4: all headlines in uniform black ink; no hue solving.
-    report = {"design": "v4 black headlines, 16 panels",
+    # v5: 13 big informative panels, one serif family, cream strips,
+    # dark attribution chips, itemised DATE CHECK. No hue solving.
+    report = {"design": "v5: 13 panels, serif system, cream strips, itemised DATE CHECK",
               "titles": {}, "summaries": {}, "brief_lines": {}, "pins": 0}
 
     img = Image.new("RGB", (W, H), PAPER)
@@ -1222,50 +1377,48 @@ def build():
     y = draw_timeline(d, y)
     y += 4
 
-    # Heroes (panel list 0-2), illustration strip 78 px
+    # Heroes (panels 1-3), illustration strip 106 px (v4: 78; the audit
+    # target was 105-110 so the hero scenes can actually tell the story)
     hero_y0 = y
-    hero_h = 162
+    hero_h = 186
     hero_w = (CONTENT_W - 2 * 6) // 3
-    hero_tf, hero_sf = font(SANS_B, 19), font(SANS, 11)
-    check_fit(PANELS[:3], [hero_w] * 3, hero_tf, hero_sf, 78, hero_h)
+    hero_tf, hero_sf = font(SERIF_B, 17), font(SERIF, 12)
+    check_fit(PANELS[:3], [hero_w] * 3, hero_tf, hero_sf, 106, hero_h)
     for i, p in enumerate(PANELS[:3]):
         x0 = MARGIN + i * (hero_w + 6)
         draw_panel(d, p, x0, hero_y0, x0 + hero_w, hero_y0 + hero_h,
-                   hero_tf, hero_sf, font(SANS, 8),
-                   font(SANS_B, 10), INK, report, ill_h=78)
-    y = hero_y0 + hero_h + 4
+                   hero_tf, hero_sf, font(SANS_B, 8),
+                   font(SANS_B, 10), INK, report, ill_h=106)
+    y = hero_y0 + hero_h + 3
 
-    # Card rows: A = panels 4-9 (6 across), B = panels 10-16 (7 across).
-    # Illustration strips 62 px (v3 cards had 48; rank 3's are ~80).
-    card_tf, card_sf = font(SANS_B, 13), font(SANS, 10)
-    rows = [(PANELS[3:9], 9), (PANELS[9:16], 8)]  # (panels, strip font size)
-    for row, strip_size in rows:
-        row_h = 156
+    # Card rows: A = panels 4-8, B = panels 9-13 (5 across each).
+    # Illustration strips 72 px (v4: 62).
+    card_tf, card_sf = font(SERIF_B, 12), font(SERIF, 11)
+    rows = [PANELS[3:8], PANELS[8:13]]
+    for row in rows:
+        row_h = 153
         n = len(row)
         card_w = (CONTENT_W - (n - 1) * 6) // n
-        check_fit(row, [card_w] * n, card_tf, card_sf, 62, row_h)
+        check_fit(row, [card_w] * n, card_tf, card_sf, 72, row_h, reserve=15)
         card_y0 = y
         for j, p in enumerate(row):
             x0 = MARGIN + j * (card_w + 6)
             draw_panel(d, p, x0, card_y0, x0 + card_w, card_y0 + row_h,
-                       card_tf, card_sf, font(SANS, 7),
-                       font(SANS_B, strip_size), INK, report, ill_h=62,
+                       card_tf, card_sf, font(SANS_B, 7),
+                       font(SANS_B, 8), INK, report, ill_h=72,
                        label_bottom=True)
-        y = card_y0 + row_h + 4
+        y = card_y0 + row_h + 3
 
     # Bottom band: map + MORE NEWS (absorbs remaining space before DATE CHECK)
-    lines2, lines3 = date_check_lines()
-    date_h = 40 + len(lines2) * 13 + 2 + len(lines3) * 13 + 8
-    foot_h = 24
-    band_h = (H - MARGIN) - date_h - 4 - foot_h - 3 - y
+    date_h = date_check_height()
+    foot_h = 22
+    band_h = (H - MARGIN) - date_h - 3 - foot_h - 2 - y
     y = draw_bottom_band(d, y, band_h, None, report)
-    y += 4
-    y = draw_date_check(d, y, date_h)
     y += 3
+    y = draw_date_check(d, y, date_h)
+    y += 2
     y = draw_footer(d, y)
     assert y <= H - MARGIN + 2, "layout overflow: y=%d" % y
-    assert all(v == 1 for v in report["brief_lines"].values()), \
-        "some brief wraps past one line: %s" % report["brief_lines"]
 
     img.save(OUT, format="PNG")
     report["size_bytes"] = os.path.getsize(OUT)

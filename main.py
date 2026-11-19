@@ -8,10 +8,12 @@ page - "THE WORLD IN ONE PAGE" - led by the APEC opening in Shenzhen,
 with the Gulf war, Manila, the AI markets day, Cyclone Akvan, the
 Ukraine drone night, Voyager 1's light-day, the U.S.-Venezuela pact,
 the EU's proposed EUR45bn Ukraine loan, the Fed minutes and UK
-inflation as illustrated panels (sixteen in all), thirty numbered
-briefs, a pin-numbered world map and a black DATE CHECK footer. The
-image was rendered deterministically with Pillow from a script in the
-build session, never AI-generated, so no text is garbled.
+inflation as illustrated panels (thirteen in all, each drawn as a
+scene that tells its story), thirty-three numbered briefs, a
+pin-numbered world map and a black DATE CHECK footer whose every
+exclusion is itemised with its own date. The image was rendered
+deterministically with Pillow from a script in the build session,
+never AI-generated, so no text is garbled.
 
 Standard library only. The program simply copies the committed PNG, so
 two runs always write byte-identical output.
