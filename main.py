@@ -3,14 +3,15 @@
 
 Writes the committed front-page image to the harness output path. The
 image (entry.png, held in this repository) sums up the world news of
-Wednesday 18 November 2026: fifty verified stories on one broadsheet page
-- "THE WORLD IN ONE PAGE" - led by the APEC opening in Shenzhen, with the
-Gulf war, Manila, the AI markets day, Cyclone Akvan, the Ukraine drone
-night, Voyager 1's light-day and the U.S.-Venezuela pact as illustrated
-panels, forty-two numbered briefs, a pin-numbered world map and a black
-DATE CHECK footer. The image was rendered deterministically with Pillow
-from a script in the build session, never AI-generated, so no text is
-garbled.
+Wednesday 18 November 2026: forty-six verified stories on one broadsheet
+page - "THE WORLD IN ONE PAGE" - led by the APEC opening in Shenzhen,
+with the Gulf war, Manila, the AI markets day, Cyclone Akvan, the
+Ukraine drone night, Voyager 1's light-day, the U.S.-Venezuela pact,
+the EU's proposed EUR45bn Ukraine loan, the Fed minutes and UK
+inflation as illustrated panels (sixteen in all), thirty numbered
+briefs, a pin-numbered world map and a black DATE CHECK footer. The
+image was rendered deterministically with Pillow from a script in the
+build session, never AI-generated, so no text is garbled.
 
 Standard library only. The program simply copies the committed PNG, so
 two runs always write byte-identical output.

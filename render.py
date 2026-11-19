@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """news-image-20261118 — deterministic front-page renderer (Pillow, stdlib + PIL).
 
-Draws "THE WORLD IN ONE PAGE — Wednesday 18 November 2026": 49 verified
-stories (13 illustrated panels + 36 numbered briefs), a numbered world map,
+Draws "THE WORLD IN ONE PAGE — Wednesday 18 November 2026": 46 verified
+stories (16 illustrated panels + 30 numbered briefs), a numbered world map,
 a UTC timeline, key numbers, a region strip and a black DATE CHECK footer.
 Output: entry.png, exactly 1024x1024, deterministic across runs.
 
-Design basis: Sketsa B4 (Keva, 19 Nov 2026) + verified winners' formula:
-every panel illustrated, coloured titles with no two orthogonally adjacent
-titles sharing a hue family (solved + verified programmatically, >=60 deg),
+Design basis: Sketsa B4 (Keva, 19 Nov 2026) + verified winners' formula,
+revised for v4 after the dev-score analysis of v3 (ANALISIS-DEV-V3.md):
+every panel illustrated, ALL panel headlines in uniform black newspaper
+ink (the v3 multi-colour headline rule is dropped — every top entry uses
+black), hard-news stories promoted to panels (EU EUR45bn loan, Fed
+minutes, UK inflation join the illustrated set, 16 panels like rank 3),
+taller illustration strips, briefs trimmed to 30 at a larger font,
 every panel summary at least 2 lines, map 1/3 wide left + MORE NEWS 2/3
 right, black DATE CHECK footer with the exclusion list.
 """
@@ -63,14 +67,15 @@ REGION_COLORS = {
 }
 
 # ---------------------------------------------------------------- data
-# Illustrated panels. Title: max 2 lines. Summary: exactly 2 lines.
-# The "n" literals below are placeholders: sequential numbers 1-13 in
+# Illustrated panels, in reading order: 3 heroes, card row A (6),
+# card row B (7) = 16 panels. Title: max 2 lines. Summary: >= 2 lines.
+# The "n" literals below are placeholders: sequential numbers 1-16 in
 # reading order are assigned after BRIEFS (see the renumbering block).
 PANELS = [
     {
         "n": 1, "city": "SHENZHEN", "topic": "SUMMIT", "region": "ASIA",
         "lon": 114.1, "lat": 22.5,
-        "title": "Trump, Xi and Putin converge on Shenzhen as APEC opens",
+        "title": "Xi opens APEC in Shenzhen as Trump lands",
         "summary": "Xi opens the APEC summit with a free-trade keynote; Trump lands in "
                    "Shenzhen; Putin speaks at the CEO Summit.",
         "label": "CONFIRMED - REUTERS / AP", "scene": "apec",
@@ -101,14 +106,14 @@ PANELS = [
     {
         "n": 5, "city": "VISAKHAPATNAM", "topic": "CYCLONE", "region": "ASIA",
         "lon": 83.3, "lat": 17.7,
-        "title": "Cyclone Akvan strengthens off India's coast",
+        "title": "Akvan strengthens off India's coast",
         "summary": "Akvan is a severe cyclonic storm 580 km east of Chennai; landfall due Friday.",
         "label": "CONFIRMED - IMD", "scene": "akvan",
     },
     {
         "n": 6, "city": "KYIV", "topic": "WAR", "region": "EUROPE",
         "lon": 30.5, "lat": 50.4,
-        "title": "Russia fires 141 drones at Ukraine; 126 downed",
+        "title": "Ukraine: 141 drones fired, 126 downed",
         "summary": "Kyiv says 141 drones attacked overnight, 126 downed; four killed in Donetsk.",
         "label": "CLAIM - UKRAINE AIR FORCE", "scene": "ukraine",
     },
@@ -116,50 +121,69 @@ PANELS = [
         "n": 7, "city": "PASADENA", "topic": "SPACE", "region": "GLOBAL",
         "lon": -118.2, "lat": 34.1,
         "title": "Voyager 1 reaches one light-day from Earth",
-        "summary": "NASA's 1977 probe is the first craft 25.9bn km out; a command sent "
-                   "today arrives tomorrow.",
+        "summary": "NASA's 1977 probe, first craft 25.9bn km out; signals take a day.",
         "label": "CONFIRMED - NASA / JPL", "scene": "voyager",
     },
     {
         "n": 8, "city": "CARACAS", "topic": "DEFENCE", "region": "AMERICAS",
         "lon": -66.9, "lat": 10.5,
         "title": "U.S. and Venezuela sign military pact",
-        "summary": "Hegseth, on his first visit since U.S. troops ousted Maduro, seals joint "
-                   "drills and intelligence sharing.",
+        "summary": "Hegseth seals joint drills and intel sharing on first visit since Maduro fell.",
         "label": "CONFIRMED - REUTERS", "scene": "caracas",
     },
     {
-        "n": 14, "city": "WELLINGTON", "topic": "GTA VI", "region": "GLOBAL",
+        "n": 9, "city": "BRUSSELS", "topic": "EU LOAN", "region": "EUROPE",
+        "lon": 4.35, "lat": 50.85,
+        "title": "EU proposes \u20ac45bn Ukraine loan for 2027",
+        "summary": "Brussels proposes a \u20ac45bn loan to support Ukraine through 2027.",
+        "label": "CONFIRMED - REUTERS", "scene": "euloan",
+    },
+    {
+        "n": 10, "city": "WASHINGTON", "topic": "FED", "region": "AMERICAS",
+        "lon": -77.0, "lat": 38.9,
+        "title": "Fed minutes hint hikes; Waller +50bp",
+        "summary": "The Fed's minutes hint at rate hikes; Waller floats a 50bp rise.",
+        "label": "CONFIRMED - FEDERAL RESERVE", "scene": "fed",
+    },
+    {
+        "n": 11, "city": "LONDON", "topic": "INFLATION", "region": "EUROPE",
+        "lon": -0.13, "lat": 51.5,
+        "title": "UK inflation climbs to 3.6%",
+        "summary": "UK inflation climbed to 3.6%, a one-year high, the ONS reported.",
+        "label": "CONFIRMED - ONS", "scene": "ukinfl",
+    },
+    {
+        "n": 12, "city": "WELLINGTON", "topic": "GTA VI", "region": "GLOBAL",
         "lon": 174.8, "lat": -41.3,
         "title": "GTA VI goes on sale; NZ first to play",
         "summary": "On sale today; New Zealand, first into release day, plays first.",
         "label": "CONFIRMED - AP", "scene": "gta",
     },
     {
-        "n": 17, "city": "ANTALYA", "topic": "COP31", "region": "GLOBAL",
+        "n": 13, "city": "ANTALYA", "topic": "COP31", "region": "GLOBAL",
         "lon": 30.7, "lat": 36.9,
-        "title": "COP31 launches a 'climate reality check'",
-        "summary": "COP31 launches a 'climate reality check' as the summit opens in Antalya.",
+        "title": "COP31's climate reality check",
+        "summary": "COP31 opens in Antalya with a 'climate reality check'.",
         "label": "CONFIRMED - UN NEWS", "scene": "cop31",
     },
     {
-        "n": 35, "city": "KINSHASA", "topic": "EBOLA", "region": "AFRICA",
+        "n": 14, "city": "KINSHASA", "topic": "EBOLA", "region": "AFRICA",
         "lon": 15.3, "lat": -4.3,
         "title": "Ebola cases pass 11,300 in DR Congo",
         "summary": "Cases pass 11,300, the WHO reports, in the DR Congo outbreak.",
         "label": "CONFIRMED - WHO", "scene": "ebola",
     },
     {
-        "n": 40, "city": "TURIN", "topic": "TENNIS", "region": "EUROPE",
+        "n": 15, "city": "TURIN", "topic": "TENNIS", "region": "EUROPE",
         "lon": 7.7, "lat": 45.1,
-        "title": "Alcaraz beats Medvedev 6-2, 6-4 in Turin",
+        "title": "Alcaraz beats Medvedev 6-2, 6-4",
         "summary": "Alcaraz wins in straight sets, 6-2, 6-4, at the ATP Finals.",
         "label": "CONFIRMED - AP", "scene": "tennis",
     },
     {
-        "n": 43, "city": "RAROTONGA", "topic": "CYCLONE", "region": "GLOBAL",
+        "n": 16, "city": "RAROTONGA", "topic": "CYCLONE", "region": "GLOBAL",
         "lon": -159.8, "lat": -21.2,
-        "title": "Cyclone Xavier, Cat 5, turns to Cook Islands",
+        "title": "Xavier, Cat 5, turns to Cook Islands",
         "summary": "Cat 5 Xavier turns toward the Cook Islands, Rarotonga in its path.",
         "label": "CONFIRMED - RNZ", "scene": "xavier",
     },
@@ -169,59 +193,53 @@ PANELS = [
 # (city - headline. source). Numbered sequentially after the panels
 # by the renumbering block below.
 BRIEFS = [
-    (9, "Gaza", "Yellow Line divides Gaza under ceasefire", "BBC", "MIDDLE EAST"),
-    (10, "Brussels", "EU proposes \u20ac45bn Ukraine loan for 2027", "Reuters", "EUROPE"),
-    (11, "London", "UK inflation climbs to 3.6%, a one-year high", "ONS", "EUROPE"),
-    (12, "Khartoum", "Amnesty: RSF drones killed 37 in El Obeid", "Amnesty", "AFRICA"),
-    (13, "Washington", "Jeffries wins Democrats' nod 251-11", "AP", "AMERICAS"),
-    (15, "Kerch", "Trains roll again, one day after the collapse", "TASS", "EUROPE"),
-    (16, "The Hague", "ICC sets first Libya trial for May 2027", "UN", "AFRICA"),
-    (19, "Washington", "Board of Peace takes shape over Gaza", "AP", "MIDDLE EAST"),
-    (20, "Vienna", "Grossi: IAEA cannot trace Iran's nuclear material", "IAEA", "GLOBAL"),
-    (21, "Moscow", "Putin not ready for serious peace talks", "NYT", "EUROPE"),
-    (22, "Naypyidaw", "Myanmar junta to review ties with ASEAN", "AP", "ASIA"),
-    (23, "Badme", "Ethiopia and Eritrea mass troops on border", "Reuters", "AFRICA"),
-    (24, "Sanaa", "UNICEF: 64 children killed in Yemen since Sept.", "UNICEF", "MIDDLE EAST"),
-    (25, "Kabul", "UN frees $18m in emergency aid for Afghans", "OCHA", "ASIA"),
-    (26, "Gaza", "Winter rains deepen the Gaza crisis", "UN News", "MIDDLE EAST"),
-    (27, "Geneva", "WHO warns antibiotic resistance is surging", "WHO", "GLOBAL"),
-    (28, "New York", "UN backs Syria, N. Korea resolutions", "UN", "GLOBAL"),
-    (29, "Jerusalem", "Region races to stop a wider war", "AP", "MIDDLE EAST"),
-    (30, "Shenzhen", "Trump vows to \"wipe them out\"", "The Hill", "AMERICAS"),
-    (31, "Washington", "Fed minutes hint hikes; Waller +50bp", "Fed", "AMERICAS"),
-    (32, "London", "Gold falls 3.2% to $3,725 an ounce", "Reuters", "GLOBAL"),
-    (33, "Johannesburg", "Litton Das sets world record: 8 dismissals", "AFP", "ASIA"),
-    (34, "Rabat", "Morocco back to world No. 5 in FIFA rankings", "FIFA", "AFRICA"),
-    (36, "Beijing", "Takaichi visits China, first PM since 2019", "Reuters", "ASIA"),
-    (37, "Shenzhen", "Lee asks Xi for help on North Korea", "Reuters", "ASIA"),
-    (38, "Lima", "Peru warns of heavy rain on north coast", "INDECI", "AMERICAS"),
-    (39, "Brasilia", "Brazil Senate passes Lula's fiscal package", "Reuters", "AMERICAS"),
-    (41, "Sydney", "Tame Impala sweeps seven ARIA Awards", "AAP", "GLOBAL"),
-    (42, "Canberra", "Australia sanctions settler leader Weiss", "Reuters", "MIDDLE EAST"),
-    (44, "Madang", "Magnitude 6.0 quake hits Papua New Guinea", "USGS", "ASIA"),
-    (45, "Maputo", "Mondlane defence seeks acquittal", "African Times", "AFRICA"),
-    (46, "Beirut", "World Bank: Lebanon rebuilding funds barely flow", "AP", "MIDDLE EAST"),
-    (47, "Dhaka", "Garment wage protests shut factories, day two", "AFP", "ASIA"),
-    (48, "Riyadh", "Coalition stops Houthi missile, hits 60 targets", "Reuters", "MIDDLE EAST"),
-    (49, "Berlin", "Germany backs Diallo's FIFA challenge", "Reuters", "EUROPE"),
-    (50, "Nuseirat", "Israeli tanks cross Yellow Line into Nuseirat", "BBC", "MIDDLE EAST"),
+    (0, "Gaza", "Yellow Line divides Gaza under ceasefire", "BBC", "MIDDLE EAST"),
+    (0, "Khartoum", "RSF drones killed 37 in El Obeid", "Amnesty", "AFRICA"),
+    (0, "Washington", "Jeffries wins Democrats' nod 251-11", "AP", "AMERICAS"),
+    (0, "The Hague", "ICC sets Libya trial for May 2027", "UN", "AFRICA"),
+    (0, "Washington", "Board of Peace takes shape over Gaza", "AP", "MIDDLE EAST"),
+    (0, "Vienna", "Grossi: Iran nuclear material untraced", "IAEA", "GLOBAL"),
+    (0, "Moscow", "Putin not ready for peace talks", "NYT", "EUROPE"),
+    (0, "Naypyidaw", "Junta to review ties with ASEAN", "AP", "ASIA"),
+    (0, "Badme", "Ethiopia, Eritrea mass troops", "Reuters", "AFRICA"),
+    (0, "Sanaa", "UNICEF: 64 children killed in Yemen", "UNICEF", "MIDDLE EAST"),
+    (0, "Kabul", "UN frees $18m in aid for Afghans", "OCHA", "ASIA"),
+    (0, "Gaza", "Winter rains deepen the Gaza crisis", "UN News", "MIDDLE EAST"),
+    (0, "Geneva", "WHO: antibiotic resistance surging", "WHO", "GLOBAL"),
+    (0, "New York", "UN backs Syria, N. Korea resolutions", "UN", "GLOBAL"),
+    (0, "Jerusalem", "Region races to stop a wider war", "AP", "MIDDLE EAST"),
+    (0, "Shenzhen", "Trump vows to \"wipe them out\"", "The Hill", "AMERICAS"),
+    (0, "London", "Gold falls 3.2% to $3,725 an ounce", "Reuters", "GLOBAL"),
+    (0, "Rabat", "Morocco back to world No. 5 in FIFA", "FIFA", "AFRICA"),
+    (0, "Beijing", "Takaichi in China, first PM since 2019", "Reuters", "ASIA"),
+    (0, "Shenzhen", "Lee asks Xi for help on North Korea", "Reuters", "ASIA"),
+    (0, "Lima", "Peru warns of heavy rain, north coast", "INDECI", "AMERICAS"),
+    (0, "Brasilia", "Brazil Senate passes Lula fiscal plan", "Reuters", "AMERICAS"),
+    (0, "Canberra", "Australia sanctions settler Weiss", "Reuters", "MIDDLE EAST"),
+    (0, "Madang", "Magnitude 6.0 quake, Papua New Guinea", "USGS", "ASIA"),
+    (0, "Maputo", "Mondlane defence seeks acquittal", "African Times", "AFRICA"),
+    (0, "Beirut", "Lebanon rebuild funds barely flow", "AP", "MIDDLE EAST"),
+    (0, "Dhaka", "Garment protests shut factories, day 2", "AFP", "ASIA"),
+    (0, "Riyadh", "Coalition stops Houthi missile", "Reuters", "MIDDLE EAST"),
+    (0, "Berlin", "Germany backs Diallo FIFA challenge", "Reuters", "EUROPE"),
+    (0, "Nuseirat", "Israeli tanks cross Yellow Line", "BBC", "MIDDLE EAST"),
 ]
 
-# Sequential numbering (v3 micro-fix): illustrated panels are 1-13 in
-# reading order (heroes, then card rows); briefs continue 14..N. Every
-# number on the page (panel strips, map pins, MORE NEWS) uses these.
+# Sequential numbering: illustrated panels are 1-16 in reading order
+# (heroes, then card rows); briefs continue 17..N. Every number on the
+# page (panel strips, map pins, MORE NEWS) uses these.
 for _i, _p in enumerate(PANELS):
     _p["n"] = _i + 1
-BRIEFS = [(14 + _i, _c, _h, _s, _r)
+BRIEFS = [(17 + _i, _c, _h, _s, _r)
           for _i, (_n, _c, _h, _s, _r) in enumerate(BRIEFS)]
 STORY_TOTAL = len(PANELS) + len(BRIEFS)
 
 KEY_NUMBERS = [
     ("141", "Russian drones fired at Ukraine overnight"),
-    ("126", "of them downed, Kyiv's air force says"),
+    ("\u20ac45bn", "EU loan proposed for Ukraine, for 2027"),
+    ("3.6%", "UK inflation - a one-year high (ONS)"),
     ("25.9bn km", "Voyager 1 from Earth - one light-day out"),
     ("$81.3bn", "Anthropic IPO, largest ever"),
-    ("251-11", "the caucus vote that nominates Jeffries"),
 ]
 
 TIMELINE = [
@@ -540,13 +558,14 @@ def scene_ukraine(d, x0, y0, x1, y1):
         d.rectangle([x, base - bh, x + bw, base + 16], fill=(38, 40, 58))
         x += bw + 3
     d.rectangle([x0, base + 14, x1, y1], fill=(14, 16, 30))
-    # drones
-    for (dx, dy) in [(x0 + 40, y0 + 18), (x0 + 110, y0 + 30), (x0 + 170, y0 + 14),
-                     (x0 + 240, y0 + 26), (x0 + 290, y0 + 18)]:
-        d.ellipse([dx - 3, dy - 2, dx + 8, dy + 2], fill=(190, 190, 190))
-        d.line([(dx + 2, dy - 6), (dx + 2, dy + 6)], fill=(190, 190, 190), width=2)
+    # drones (x as fractions of width, so narrow cards stay in-box)
+    for (fx, dy) in [(0.12, 18), (0.33, 30), (0.52, 14), (0.74, 26), (0.88, 18)]:
+        dx = x0 + int(w * fx)
+        d.ellipse([dx - 3, y0 + dy - 2, dx + 8, y0 + dy + 2], fill=(190, 190, 190))
+        d.line([(dx + 2, y0 + dy - 6), (dx + 2, y0 + dy + 6)], fill=(190, 190, 190), width=2)
     # interception bursts
-    for (bx, by) in [(x0 + 70, y0 + 44), (x0 + 200, y0 + 48), (x0 + 270, y0 + 40)]:
+    for (bx, by) in [(x0 + int(w * 0.22), y0 + 44), (x0 + int(w * 0.62), y0 + 48),
+                     (x0 + int(w * 0.84), y0 + 40)]:
         for ang in range(0, 360, 45):
             a = math.radians(ang)
             d.line([(bx, by), (bx + 10 * math.cos(a), by + 10 * math.sin(a))],
@@ -594,7 +613,8 @@ def scene_caracas(d, x0, y0, x1, y1):
               fill=(178, 52, 52))
     d.rectangle([x0 + w // 2 - 3, y0 + int(h * 0.18), x0 + w // 2 + 3, y0 + int(h * 0.30)],
                 fill=(120, 100, 70))
-    for cx in [x0 + 44, x0 + 84, x0 + 214, x0 + 254]:
+    for fx in [0.14, 0.27, 0.68, 0.82]:
+        cx = x0 + int(w * fx)
         if x0 + 20 < cx < x1 - 24:
             d.rectangle([cx - 4, y0 + int(h * 0.58), cx + 4, y1 - 6], fill=(210, 200, 180))
     # flags: US + Venezuela (yellow/blue/red bands)
@@ -684,7 +704,9 @@ def scene_ebola(d, x0, y0, x1, y1):
              (128, 0.58, 12, (220, 70, 130)), (172, 0.32, 6, (60, 200, 180)),
              (56, 0.82, 5, (60, 200, 180))]
     for (ox, fy, r, col) in parts:
-        cx, cy = x0 + ox, y0 + int(h * fy)
+        # x offsets were tuned for a 196 px card; scale to the actual box
+        cx = x0 + min(int(ox * w / 196.0), w - r - 6)
+        cy = y0 + int(h * fy)
         for ang in range(0, 360, 45):
             a = math.radians(ang)
             d.line([(cx, cy), (cx + (r + 4) * math.cos(a), cy + (r + 4) * math.sin(a))],
@@ -767,14 +789,96 @@ def scene_cop31(d, x0, y0, x1, y1):
                (gx + 4, gy + 8)], fill=(90, 190, 110))
     d.polygon([(gx - 5, gy + 7), (gx + 1, gy + 5), (gx + 1, gy + 10),
                (gx - 3, gy + 11)], fill=(90, 190, 110))
-    # flags on poles, centre-right, below the strip
+    # flags on poles, centre-right, below the strip (spacing scales
+    # with the box so narrow cards keep all five flags in-box)
     flag_cols = [(206, 32, 32), (36, 64, 140), (250, 210, 40), (34, 139, 92),
                  (255, 255, 255)]
-    fx = x0 + 100
+    fx = x0 + int(w * 0.52)
+    step = max(12, int(w * 0.088))
     for col in flag_cols:
         d.rectangle([fx, y0 + 20, fx + 2, y1 - 8], fill=(60, 60, 60))
-        d.rectangle([fx + 2, y0 + 20, fx + 15, y0 + 29], fill=col)
-        fx += 19
+        d.rectangle([fx + 2, y0 + 20, fx + 2 + step - 5, y0 + 29], fill=col)
+        fx += step
+
+
+def scene_euloan(d, x0, y0, x1, y1):
+    """EU loan for Ukraine: EU circle of stars, gold bars, Ukraine band."""
+    w, h = x1 - x0, y1 - y0
+    d.rectangle([x0, y0, x1, y1], fill=(24, 52, 120))
+    # circle of 12 gold stars, left
+    cx, cy, rr = x0 + int(w * 0.24), y0 + h // 2, max(10, h // 4)
+    for k in range(12):
+        a = math.radians(k * 30 - 90)
+        sx, sy = cx + rr * math.cos(a), cy + rr * math.sin(a)
+        _flag_star(d, sx, sy, 3, (255, 204, 0))
+    d.text((cx - 4, cy - 8), "\u20ac", font=font(SERIF_B, 17), fill=(255, 204, 0))
+    # gold bars, centre-right
+    bx = x0 + int(w * 0.52)
+    for row in range(3):
+        n = 3 - row
+        for i in range(n):
+            gx = bx + i * 20 + row * 10
+            gy = y1 - 12 - row * 9
+            d.polygon([(gx, gy), (gx + 5, gy - 5), (gx + 21, gy - 5),
+                       (gx + 16, gy)], fill=(240, 196, 60))
+            d.polygon([(gx, gy), (gx + 5, gy - 5), (gx + 21, gy - 5),
+                       (gx + 16, gy)], outline=(160, 120, 20))
+    # Ukraine band (blue over yellow) along the top right
+    d.rectangle([x0 + int(w * 0.55), y0 + 5, x1 - 8, y0 + 11], fill=(64, 140, 220))
+    d.rectangle([x0 + int(w * 0.55), y0 + 11, x1 - 8, y0 + 17], fill=(250, 210, 40))
+    t = "\u20ac45bn"
+    tf = font(SERIF_B, 15)
+    d.text((x1 - 10 - tf.getlength(t), y0 + 22), t, font=tf, fill=(255, 255, 255))
+
+
+def scene_fed(d, x0, y0, x1, y1):
+    """The Fed: neoclassical facade, columns, a rising rate arrow."""
+    w, h = x1 - x0, y1 - y0
+    d.rectangle([x0, y0, x1, y1], fill=(216, 208, 188))
+    base = y1 - 8
+    # pediment + entablature
+    d.polygon([(x0 + 12, y0 + 22), (x0 + w // 2, y0 + 6), (x1 - 12, y0 + 22)],
+              fill=(240, 236, 224))
+    d.rectangle([x0 + 12, y0 + 22, x1 - 12, y0 + 28], fill=(240, 236, 224))
+    # columns
+    for fx in [0.16, 0.34, 0.52, 0.70, 0.86]:
+        cx = x0 + int(w * fx)
+        d.rectangle([cx - 4, y0 + 28, cx + 4, base - 6], fill=(244, 240, 230))
+        d.rectangle([cx - 6, y0 + 28, cx + 6, y0 + 32], fill=(228, 222, 204))
+    # steps
+    d.rectangle([x0 + 8, base - 6, x1 - 8, base - 2], fill=(228, 222, 204))
+    d.rectangle([x0 + 4, base - 2, x1 - 4, base + 2], fill=(214, 206, 186))
+    # rising arrow across the facade
+    d.line([(x0 + 14, base - 12), (x1 - 26, y0 + 34)], fill=(178, 34, 34), width=3)
+    d.polygon([(x1 - 26, y0 + 34), (x1 - 40, y0 + 36), (x1 - 30, y0 + 46)],
+              fill=(178, 34, 34))
+    # tag below the panel strip line (the strip overlays the top 18 px)
+    t = "+50bp?"
+    tf = font(SANS_B, 11)
+    d.text((x1 - 8 - tf.getlength(t), y0 + 21), t, font=tf, fill=(178, 34, 34))
+
+
+def scene_ukinfl(d, x0, y0, x1, y1):
+    """UK inflation: price tags climbing a rising trend line, pound sign."""
+    w, h = x1 - x0, y1 - y0
+    d.rectangle([x0, y0, x1, y1], fill=(236, 232, 222))
+    # rising trend line
+    d.line([(x0 + 8, y1 - 12), (x1 - 12, y0 + 14)], fill=(178, 34, 34), width=3)
+    d.polygon([(x1 - 12, y0 + 14), (x1 - 26, y0 + 16), (x1 - 17, y0 + 26)],
+              fill=(178, 34, 34))
+    # three price tags climbing the line
+    tags = [(0.16, 0.66, "\u00a32.10"), (0.44, 0.44, "\u00a33.40"), (0.70, 0.24, "\u00a34.85")]
+    tf = font(SANS_B, 10)
+    for (fx, fy, t) in tags:
+        tx, ty = x0 + int(w * fx), y0 + int(h * fy)
+        tw = tf.getlength(t) + 12
+        d.polygon([(tx, ty), (tx + 8, ty - 7), (tx + tw, ty - 7),
+                   (tx + tw, ty + 9), (tx, ty + 9)], fill=(250, 214, 90),
+                  outline=(150, 110, 20))
+        d.ellipse([tx + 3, ty - 1, tx + 7, ty + 3], fill=(236, 232, 222))
+        d.text((tx + 10, ty - 3), t, font=tf, fill=(60, 45, 10))
+    # (no big "3.6%" in-scene: the panel strip overlays the top-left, and
+    # the panel title already carries the figure)
 
 
 SCENES = {
@@ -783,6 +887,7 @@ SCENES = {
     "voyager": scene_voyager, "caracas": scene_caracas,
     "gta": scene_gta, "alaska": scene_alaska, "ebola": scene_ebola,
     "tennis": scene_tennis, "xavier": scene_xavier, "cop31": scene_cop31,
+    "euloan": scene_euloan, "fed": scene_fed, "ukinfl": scene_ukinfl,
 }
 
 # ---------------------------------------------------------------- world map
@@ -979,7 +1084,7 @@ def draw_bottom_band(d, y, band_h, hues, report):
                 if point_in_poly(lon, lat, poly):
                     d.ellipse([gx - 1, gy - 1, gx + 1, gy + 1], fill=(120, 140, 130))
                     break
-    # pins for the 13 illustrated panels
+    # pins for the illustrated panels
     pin_f = font(SANS_B, 10)
     for p in PANELS:
         px, py = lonlat_to_xy(p["lon"], p["lat"], map_x0, map_y0, map_x1, map_y1)
@@ -989,13 +1094,15 @@ def draw_bottom_band(d, y, band_h, hues, report):
         d.text((px - pin_f.getlength(num) / 2, py - 7), num, font=pin_f, fill=WHITE)
     report["pins"] = len(PANELS)
     # Voyager callout (probe is 25.9bn km out - off the map, not a place pin)
-    d.text((map_x0 + 4, map_y1 + 4), "7 Voyager 1: 25.9bn km out - off this map,",
+    voy_n = next(p["n"] for p in PANELS if p["scene"] == "voyager")
+    d.text((map_x0 + 4, map_y1 + 4),
+           "%d Voyager 1: 25.9bn km out - off this map," % voy_n,
            font=font(SANS_I, 10), fill=INK_SOFT)
     d.text((map_x0 + 4, map_y1 + 18), "one light-day from Earth (NASA/JPL).",
            font=font(SANS_I, 10), fill=INK_SOFT)
     # legend
     ly = map_y1 + 38
-    d.text((MARGIN + 8, ly), "PIN No. = STORY No.  Pins mark the 13",
+    d.text((MARGIN + 8, ly), "PIN No. = STORY No.  Pins mark the %d" % len(PANELS),
            font=font(SANS_B, 10), fill=INK)
     d.text((MARGIN + 8, ly + 14), "illustrated stories; briefs at right.",
            font=font(SANS_B, 10), fill=INK)
@@ -1016,7 +1123,7 @@ def draw_bottom_band(d, y, band_h, hues, report):
     right = "%d MORE STORIES" % len(BRIEFS)
     d.text((more_x1 - 8 - f_head.getlength(right), y + 6), right, font=f_head, fill=RED)
     d.line([(more_x0, y + 24), (more_x1, y + 24)], fill=RULE, width=1)
-    brief_f = font(SANS, 10)
+    brief_f = font(SANS, 11)
     col_w = (more_x1 - more_x0 - 16) / 2
     rows = (len(BRIEFS) + 1) // 2
     row_h = (band_h - 30) / rows
@@ -1027,11 +1134,11 @@ def draw_bottom_band(d, y, band_h, hues, report):
         bx = more_x0 + 8 + col * col_w
         by = y + 28 + row * row_h
         # region-coloured number
-        d.text((bx, by), str(n), font=font(SANS_B, 10), fill=REGION_COLORS[region])
+        d.text((bx, by), str(n), font=font(SANS_B, 11), fill=REGION_COLORS[region])
         text = "%s \u2014 %s. %s" % (city, head, src)
-        lines = wrap(text, brief_f, col_w - 26)
+        lines = wrap(text, brief_f, col_w - 28)
         report["brief_lines"][n] = len(lines)
-        draw_wrapped(d, lines, bx + 22, by, brief_f, INK, 12)
+        draw_wrapped(d, lines, bx + 24, by, brief_f, INK, 13)
     return y + band_h
 
 
@@ -1074,18 +1181,22 @@ def draw_footer(d, y):
 
 
 # ---------------------------------------------------------------- build
+def check_fit(panels, widths, title_fnt, sum_fnt, ill_h, row_h):
+    """Fail loudly if any panel's text would spill out of its box."""
+    for p, pw in zip(panels, widths):
+        tl = wrap(p["title"], title_fnt, pw - 12)
+        sl = wrap(p["summary"], sum_fnt, pw - 12)
+        assert len(tl) <= 2, "panel %d title wraps to %d lines" % (p["n"], len(tl))
+        assert len(sl) >= 2, "panel %d summary under 2 lines" % p["n"]
+        need = ill_h + 6 + len(tl) * (title_fnt.size + 3) + 2 \
+            + len(sl) * (sum_fnt.size + 3)
+        assert need <= row_h - 2, \
+            "panel %d needs %d px, row is %d" % (p["n"], need, row_h)
+
+
 def build():
-    # Orthogonal adjacency among the 13 panels (list indices).
-    # Heroes row: 0-1, 1-2. Card rows: 3-4-5-6-7 and 8-9-10-11-12.
-    # Vertical (overlapping x-ranges, hero width 330, card width ~200):
-    # hero 0 above cards 3,4; hero 1 above 4,5,6; hero 2 above 6,7;
-    # card row A directly above row B (same x): 3-8, 4-9, 5-10, 6-11, 7-12.
-    adjacency = [(0, 1), (1, 2), (3, 4), (4, 5), (5, 6), (6, 7),
-                 (8, 9), (9, 10), (10, 11), (11, 12),
-                 (0, 3), (0, 4), (1, 4), (1, 5), (1, 6), (2, 6), (2, 7),
-                 (3, 8), (4, 9), (5, 10), (6, 11), (7, 12)]
-    hues, hue_pairs, hue_min = solve_title_hues(adjacency, n_panels=len(PANELS))
-    report = {"hues": hues, "hue_pairs": hue_pairs, "hue_min": hue_min,
+    # v4: all headlines in uniform black ink; no hue solving.
+    report = {"design": "v4 black headlines, 16 panels",
               "titles": {}, "summaries": {}, "brief_lines": {}, "pins": 0}
 
     img = Image.new("RGB", (W, H), PAPER)
@@ -1111,27 +1222,35 @@ def build():
     y = draw_timeline(d, y)
     y += 4
 
-    # Heroes (panel list 0-2)
+    # Heroes (panel list 0-2), illustration strip 78 px
     hero_y0 = y
     hero_h = 162
     hero_w = (CONTENT_W - 2 * 6) // 3
+    hero_tf, hero_sf = font(SANS_B, 19), font(SANS, 11)
+    check_fit(PANELS[:3], [hero_w] * 3, hero_tf, hero_sf, 78, hero_h)
     for i, p in enumerate(PANELS[:3]):
         x0 = MARGIN + i * (hero_w + 6)
         draw_panel(d, p, x0, hero_y0, x0 + hero_w, hero_y0 + hero_h,
-                   font(SANS_B, 19), font(SANS, 11), font(SANS, 8),
-                   font(SANS_B, 10), title_color(hues[i]), report, ill_h=78)
+                   hero_tf, hero_sf, font(SANS, 8),
+                   font(SANS_B, 10), INK, report, ill_h=78)
     y = hero_y0 + hero_h + 4
 
-    # Mid cards: row A (list 3-7), row B (list 8-12)
-    card_w = (CONTENT_W - 4 * 6) // 5
-    for row_i, (row, row_h) in enumerate([(PANELS[3:8], 140), (PANELS[8:13], 136)]):
+    # Card rows: A = panels 4-9 (6 across), B = panels 10-16 (7 across).
+    # Illustration strips 62 px (v3 cards had 48; rank 3's are ~80).
+    card_tf, card_sf = font(SANS_B, 13), font(SANS, 10)
+    rows = [(PANELS[3:9], 9), (PANELS[9:16], 8)]  # (panels, strip font size)
+    for row, strip_size in rows:
+        row_h = 156
+        n = len(row)
+        card_w = (CONTENT_W - (n - 1) * 6) // n
+        check_fit(row, [card_w] * n, card_tf, card_sf, 62, row_h)
         card_y0 = y
         for j, p in enumerate(row):
             x0 = MARGIN + j * (card_w + 6)
             draw_panel(d, p, x0, card_y0, x0 + card_w, card_y0 + row_h,
-                       font(SANS_B, 14), font(SANS, 10), font(SANS, 7),
-                       font(SANS_B, 9), title_color(hues[row_i * 5 + 3 + j]),
-                       report, ill_h=48, label_bottom=True)
+                       card_tf, card_sf, font(SANS, 7),
+                       font(SANS_B, strip_size), INK, report, ill_h=62,
+                       label_bottom=True)
         y = card_y0 + row_h + 4
 
     # Bottom band: map + MORE NEWS (absorbs remaining space before DATE CHECK)
@@ -1139,12 +1258,14 @@ def build():
     date_h = 40 + len(lines2) * 13 + 2 + len(lines3) * 13 + 8
     foot_h = 24
     band_h = (H - MARGIN) - date_h - 4 - foot_h - 3 - y
-    y = draw_bottom_band(d, y, band_h, hues, report)
+    y = draw_bottom_band(d, y, band_h, None, report)
     y += 4
     y = draw_date_check(d, y, date_h)
     y += 3
     y = draw_footer(d, y)
     assert y <= H - MARGIN + 2, "layout overflow: y=%d" % y
+    assert all(v == 1 for v in report["brief_lines"].values()), \
+        "some brief wraps past one line: %s" % report["brief_lines"]
 
     img.save(OUT, format="PNG")
     report["size_bytes"] = os.path.getsize(OUT)
@@ -1154,8 +1275,8 @@ def build():
     with open(REPORT, "w") as f:
         json.dump(report, f, indent=1, sort_keys=True)
     sha = hashlib.sha256(open(OUT, "rb").read()).hexdigest()
-    print("WROTE %s sha256=%s bytes=%d hue_min=%.1f" %
-          (OUT, sha, report["size_bytes"], hue_min))
+    print("WROTE %s sha256=%s bytes=%d stories=%d" %
+          (OUT, sha, report["size_bytes"], report["story_total"]))
     print(json.dumps(report, sort_keys=True))
     return report
 
