@@ -559,14 +559,15 @@ def scene_akvan(d, x0, y0, x1, y1):
         yb = cy + (ey - cy) * t1 - 10 * math.sin(t1 * math.pi)
         d.line([(xa, ya), (xb, yb)], fill=(255, 210, 90), width=2)
     d.polygon([(ex, ey), (ex - 11, ey - 4), (ex - 8, ey + 6)], fill=(255, 210, 90))
-    t = "TO INDIA COAST"
-    tf = font(SANS_B, 9)
-    d.text((x1 - 8 - tf.getlength(t), y1 - 13), t, font=tf, fill=(90, 60, 20))
+    # v6 (Keva rule 3): the old "TO INDIA COAST" label straddled the
+    # coastline edge (half on sea, half on sand) — removed; the dashed
+    # track arrow alone carries the direction, no half-cut text.
     # rain lines
     for rx in range(x0 + 10, x1 - 50, 16):
         d.line([(rx, y0 + 8), (rx - 5, y0 + 26)], fill=(180, 210, 235), width=2)
-    # warning triangle
-    tx, ty = x1 - 34, y0 + 10
+    # warning triangle (v6: lowered from y0+10 — its top was clipped by
+    # the panel strip; now whole below it, with margin)
+    tx, ty = x1 - 34, y0 + 21
     d.polygon([(tx, ty), (tx + 22, ty), (tx + 11, ty + 20)], fill=(255, 60, 40))
     d.text((tx + 8, ty + 4), "!", font=font(SANS_B, 12), fill=(255, 255, 255))
 
@@ -632,7 +633,9 @@ def scene_voyager(d, x0, y0, x1, y1):
     d.line([(px - 16, py + 10), (px + 6, py - 2)], fill=(200, 200, 200), width=2)
     d.ellipse([px - 4, py - 12, px + 14, py + 6], fill=(232, 184, 60))
     d.rectangle([px - 14, py - 2, px + 2, py + 6], fill=(180, 180, 180))
-    d.text((x0 + 8, y0 + 4), "1 LIGHT-DAY", font=font(SANS_B, 12), fill=(255, 220, 110))
+    # v6 (Keva rule 3): label moved from y0+4 (fully hidden under the
+    # panel strip) to y0+21 — now fully visible inside the scene.
+    d.text((x0 + 8, y0 + 21), "1 LIGHT-DAY", font=font(SANS_B, 12), fill=(255, 220, 110))
 
 
 def scene_caracas(d, x0, y0, x1, y1):
@@ -762,9 +765,12 @@ def scene_ebola(d, x0, y0, x1, y1):
     """Virus particles under a microscope: spiked spheres."""
     w, h = x1 - x0, y1 - y0
     d.rectangle([x0, y0, x1, y1], fill=(12, 40, 44))
-    parts = [(30, 0.55, 10, (220, 70, 130)), (78, 0.30, 7, (240, 140, 60)),
-             (128, 0.58, 12, (220, 70, 130)), (172, 0.32, 6, (60, 200, 180)),
-             (56, 0.82, 5, (60, 200, 180))]
+    # v6 (Keva rule 2): the two upper particles' spikes were clipped by
+    # the 17 px panel strip — lowered so every particle is whole with
+    # margin; the lowest one nudged up for a bottom margin too.
+    parts = [(30, 0.55, 10, (220, 70, 130)), (78, 0.44, 7, (240, 140, 60)),
+             (128, 0.58, 12, (220, 70, 130)), (172, 0.46, 6, (60, 200, 180)),
+             (56, 0.80, 5, (60, 200, 180))]
     for (ox, fy, r, col) in parts:
         # x offsets were tuned for a 196 px card; scale to the actual box
         cx = x0 + min(int(ox * w / 196.0), w - r - 6)
@@ -960,11 +966,13 @@ def scene_ukinfl(d, x0, y0, x1, y1):
     w, h = x1 - x0, y1 - y0
     d.rectangle([x0, y0, x1, y1], fill=(236, 232, 222))
     # rising trend line
-    d.line([(x0 + 8, y1 - 12), (x1 - 12, y0 + 14)], fill=(178, 34, 34), width=3)
-    d.polygon([(x1 - 12, y0 + 14), (x1 - 26, y0 + 16), (x1 - 17, y0 + 26)],
+    # v6 (Keva rules 2-3): line head + top tag lowered fully below the
+    # 17 px panel strip (they were clipped by it) — whole, with margin.
+    d.line([(x0 + 8, y1 - 12), (x1 - 12, y0 + 25)], fill=(178, 34, 34), width=3)
+    d.polygon([(x1 - 12, y0 + 25), (x1 - 27, y0 + 26), (x1 - 18, y0 + 37)],
               fill=(178, 34, 34))
     # three price tags climbing the line
-    tags = [(0.16, 0.68, "\u00a32.10"), (0.44, 0.48, "\u00a33.40"), (0.70, 0.30, "\u00a34.85")]
+    tags = [(0.16, 0.68, "\u00a32.10"), (0.44, 0.48, "\u00a33.40"), (0.70, 0.42, "\u00a34.85")]
     tf = font(SANS_B, 10)
     for (fx, fy, t) in tags:
         tx, ty = x0 + int(w * fx), y0 + int(h * fy)
@@ -1351,7 +1359,7 @@ def check_fit(panels, widths, title_fnt, sum_fnt, ill_h, row_h, reserve=2):
 def build():
     # v5: 13 big informative panels, one serif family, cream strips,
     # dark attribution chips, itemised DATE CHECK. No hue solving.
-    report = {"design": "v5: 13 panels, serif system, cream strips, itemised DATE CHECK",
+    report = {"design": "v6: v5 + Keva composition fixes (whole subjects with margin, no half-cut in-scene text)",
               "titles": {}, "summaries": {}, "brief_lines": {}, "pins": 0}
 
     img = Image.new("RGB", (W, H), PAPER)
